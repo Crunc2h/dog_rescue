@@ -1,0 +1,296 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page_title|default:"All Dogs" }} - Dog Rescue Management{% endblock %}
+
+{% block extra_css %}
+<style>
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+    }
+
+    .page-title {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--text-color);
+    }
+
+    .breadcrumb {
+        font-size: 0.9rem;
+        color: var(--text-light);
+        margin-bottom: 0.5rem;
+    }
+
+    .breadcrumb a {
+        color: var(--primary-color);
+        text-decoration: none;
+    }
+
+    .breadcrumb a:hover {
+        text-decoration: underline;
+    }
+
+    .dogs-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .dog-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: var(--shadow);
+        transition: all 0.2s ease;
+        cursor: pointer;
+        border: 1px solid var(--border-color);
+    }
+
+    .dog-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-lg);
+    }
+
+    .dog-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 1rem;
+    }
+
+    .dog-name {
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: var(--text-color);
+    }
+
+    .dog-status {
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 500;
+    }
+
+    .status-available {
+        background: #ecfdf5;
+        color: #065f46;
+    }
+
+    .status-adopted {
+        background: #dbeafe;
+        color: #1e40af;
+    }
+
+    .dog-details {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.5rem;
+        font-size: 0.9rem;
+        color: var(--text-light);
+        margin-bottom: 1rem;
+    }
+
+    .dog-charter {
+        font-size: 0.8rem;
+        color: var(--text-light);
+        padding: 0.5rem;
+        background: var(--secondary-color);
+        border-radius: 6px;
+        text-align: center;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 3rem;
+        color: var(--text-light);
+        background: white;
+        border-radius: 12px;
+        box-shadow: var(--shadow);
+    }
+
+    .empty-state-icon {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+    }
+
+    .pagination {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 1rem;
+        margin-top: 2rem;
+    }
+
+    .pagination a, .pagination span {
+        padding: 0.5rem 1rem;
+        border-radius: 6px;
+        text-decoration: none;
+        color: var(--text-color);
+        border: 1px solid var(--border-color);
+    }
+
+    .pagination a:hover {
+        background: var(--primary-color);
+        color: white;
+        border-color: var(--primary-color);
+    }
+
+    .pagination .current {
+        background: var(--primary-color);
+        color: white;
+        border-color: var(--primary-color);
+    }
+
+    .filters {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: var(--shadow);
+        margin-bottom: 2rem;
+    }
+
+    .filter-row {
+        display: flex;
+        gap: 1rem;
+        align-items: end;
+    }
+
+    .filter-group {
+        flex: 1;
+    }
+
+    .filter-label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+        color: var(--text-color);
+        font-size: 0.9rem;
+    }
+
+    .filter-input, .filter-select {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        font-size: 0.9rem;
+    }
+
+    .filter-input:focus, .filter-select:focus {
+        outline: none;
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="breadcrumb">
+    <a href="{% url 'main:dashboard' %}">Dashboard</a>
+    {% if charter %}
+        > <a href="{% url 'records:charter_detail' charter.pk %}">{{ charter.name }}</a>
+        > Dogs
+    {% else %}
+        > All Dogs
+    {% endif %}
+</div>
+
+<div class="page-header">
+    <h1 class="page-title">{{ page_title|default:"All Dogs" }}</h1>
+    {% if charter %}
+        <a href="{% url 'records:dog_create' %}?charter={{ charter.pk }}" class="btn">+ Add Dog</a>
+    {% else %}
+        <a href="{% url 'records:dog_create' %}" class="btn">+ Add Dog</a>
+    {% endif %}
+</div>
+
+<!-- Filters -->
+<div class="filters">
+    <form method="get" class="filter-row">
+        <div class="filter-group">
+            <label class="filter-label">Search by name</label>
+            <input type="text" name="search" class="filter-input" placeholder="Dog name..." value="{{ request.GET.search }}">
+        </div>
+        <div class="filter-group">
+            <label class="filter-label">Breed</label>
+            <select name="breed" class="filter-select">
+                <option value="">All breeds</option>
+                {% for value, label in breed_choices %}
+                    <option value="{{ value }}" {% if request.GET.breed == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="filter-group">
+            <label class="filter-label">Status</label>
+            <select name="status" class="filter-select">
+                <option value="">All statuses</option>
+                <option value="available" {% if request.GET.status == "available" %}selected{% endif %}>Available</option>
+                <option value="adopted" {% if request.GET.status == "adopted" %}selected{% endif %}>Adopted</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <button type="submit" class="btn">Filter</button>
+            <a href="{% url 'records:dog_list' %}{% if charter %}?charter={{ charter.pk }}{% endif %}" class="btn btn-secondary">Clear</a>
+        </div>
+    </form>
+</div>
+
+{% if dogs %}
+<div class="dogs-grid">
+    {% for dog in dogs %}
+    <div class="dog-card" onclick="window.location.href='{% url 'records:dog_detail' dog.pk %}'">
+        <div class="dog-header">
+            <div class="dog-name">{{ dog.name }}</div>
+            <div class="dog-status {% if dog.is_adopted %}status-adopted{% else %}status-available{% endif %}">
+                {% if dog.is_adopted %}Adopted{% else %}Available{% endif %}
+            </div>
+        </div>
+        <div class="dog-details">
+            <div><strong>Age:</strong> {{ dog.age_months }} months</div>
+            <div><strong>Breed:</strong> {{ dog.get_breed_display }}</div>
+            <div><strong>Gender:</strong> {{ dog.get_gender_display }}</div>
+            <div><strong>Health:</strong> {{ dog.get_health_status_display }}</div>
+        </div>
+        {% if not charter %}
+        <div class="dog-charter">
+            {{ dog.charter.name }}
+        </div>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Pagination -->
+{% if is_paginated %}
+<div class="pagination">
+    {% if page_obj.has_previous %}
+        <a href="?page=1{% if request.GET.charter %}&charter={{ request.GET.charter }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.breed %}&breed={{ request.GET.breed }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">First</a>
+        <a href="?page={{ page_obj.previous_page_number }}{% if request.GET.charter %}&charter={{ request.GET.charter }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.breed %}&breed={{ request.GET.breed }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">Previous</a>
+    {% endif %}
+    
+    <span class="current">
+        Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+    </span>
+    
+    {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}{% if request.GET.charter %}&charter={{ request.GET.charter }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.breed %}&breed={{ request.GET.breed }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">Next</a>
+        <a href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.charter %}&charter={{ request.GET.charter }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.breed %}&breed={{ request.GET.breed }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">Last</a>
+    {% endif %}
+</div>
+{% endif %}
+
+{% else %}
+<div class="empty-state">
+    <div class="empty-state-icon">🐕</div>
+    <h3>No dogs found</h3>
+    <p>{% if charter %}This charter doesn't have any dogs yet.{% else %}No dogs match your search criteria.{% endif %}</p>
+    {% if charter %}
+        <a href="{% url 'records:dog_create' %}?charter={{ charter.pk }}" class="btn" style="margin-top: 1rem;">+ Add Dog</a>
+    {% else %}
+        <a href="{% url 'records:dog_create' %}" class="btn" style="margin-top: 1rem;">+ Add Dog</a>
+    {% endif %}
+</div>
+{% endif %}
+{% endblock %}

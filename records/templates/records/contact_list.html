@@ -1,0 +1,277 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page_title }} - Dog Rescue Management{% endblock %}
+
+{% block extra_css %}
+<style>
+    .contact-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 1.5rem;
+    }
+
+    .contact-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: var(--shadow);
+        overflow: hidden;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        cursor: pointer;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .contact-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-lg);
+    }
+
+    .contact-card-header {
+        padding: 1.5rem 1.5rem 1rem;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .contact-card-name {
+        font-size: 1.3rem;
+        font-weight: 600;
+        color: var(--text-color);
+        margin-bottom: 0.5rem;
+    }
+
+    .contact-card-charter {
+        font-size: 0.9rem;
+        color: var(--text-light);
+        background: var(--secondary-color);
+        padding: 0.25rem 0.75rem;
+        border-radius: 12px;
+        display: inline-block;
+    }
+
+    .contact-card-content {
+        padding: 1rem 1.5rem 1.5rem;
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .contact-info-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 0.75rem;
+        font-size: 0.9rem;
+    }
+
+    .contact-info-item:last-child {
+        margin-bottom: 0;
+    }
+
+    .contact-info-icon {
+        width: 20px;
+        margin-right: 0.75rem;
+        color: var(--text-light);
+        font-size: 1rem;
+    }
+
+    .contact-info-text {
+        color: var(--text-color);
+        flex: 1;
+    }
+
+    .contact-info-text a {
+        color: var(--primary-color);
+        text-decoration: none;
+    }
+
+    .contact-info-text a:hover {
+        text-decoration: underline;
+    }
+
+    .contact-notes {
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid var(--border-color);
+    }
+
+    .contact-notes-text {
+        font-size: 0.85rem;
+        color: var(--text-light);
+        line-height: 1.4;
+        font-style: italic;
+    }
+
+    .contact-status {
+        display: inline-block;
+        padding: 0.3rem 0.8rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 500;
+        margin-top: auto;
+    }
+
+    .status-owner {
+        background: #dbeafe;
+        color: #1e40af;
+    }
+
+    .status-potential {
+        background: #ecfdf5;
+        color: #065f46;
+    }
+
+    .pagination {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 0.5rem;
+        margin-top: 2rem;
+    }
+
+    .pagination-link {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        border-radius: 8px;
+        text-decoration: none;
+        color: var(--text-color);
+        background: white;
+        border: 1px solid var(--border-color);
+        transition: all 0.2s ease;
+    }
+
+    .pagination-link:hover {
+        background: var(--primary-color);
+        color: white;
+        border-color: var(--primary-color);
+    }
+
+    .pagination-link.active {
+        background: var(--primary-color);
+        color: white;
+        border-color: var(--primary-color);
+        font-weight: 600;
+    }
+
+    .pagination-disabled {
+        color: var(--text-light);
+        pointer-events: none;
+        opacity: 0.6;
+    }
+
+    .breadcrumbs {
+        margin-bottom: 1.5rem;
+        font-size: 0.9rem;
+        color: var(--text-light);
+    }
+
+    .breadcrumbs a {
+        color: var(--primary-color);
+        text-decoration: none;
+    }
+
+    .breadcrumbs a:hover {
+        text-decoration: underline;
+    }
+
+    .breadcrumbs span {
+        margin: 0 0.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">{{ page_title }}</h1>
+    <a href="{% url 'records:contact_create' %}{% if charter %}?charter={{ charter.pk }}{% endif %}" class="btn">+ Add Contact</a>
+</div>
+
+{% if charter %}
+<div class="breadcrumbs">
+    <a href="{% url 'main:dashboard' %}">Dashboard</a>
+    <span>/</span>
+    <a href="{% url 'records:charter_detail' charter.pk %}">{{ charter.name }}</a>
+    <span>/</span>
+    <span>Contacts</span>
+</div>
+{% endif %}
+
+{% if contacts %}
+<div class="contact-grid">
+    {% for contact in contacts %}
+    <div class="contact-card" onclick="window.location.href='{% url 'records:contact_detail' contact.pk %}'">
+        <div class="contact-card-header">
+            <div class="contact-card-name">{{ contact.name }}</div>
+            <div class="contact-card-charter">{{ contact.charter.name }}</div>
+        </div>
+        <div class="contact-card-content">
+            <div class="contact-info-item">
+                <span class="contact-info-icon">📧</span>
+                <span class="contact-info-text">
+                    <a href="mailto:{{ contact.email }}">{{ contact.email }}</a>
+                </span>
+            </div>
+            <div class="contact-info-item">
+                <span class="contact-info-icon">📞</span>
+                <span class="contact-info-text">
+                    <a href="tel:{{ contact.phone }}">{{ contact.phone }}</a>
+                </span>
+            </div>
+            <div class="contact-info-item">
+                <span class="contact-info-icon">📍</span>
+                <span class="contact-info-text">{{ contact.address|truncatechars:50 }}</span>
+            </div>
+            
+            {% if contact.notes %}
+            <div class="contact-notes">
+                <div class="contact-notes-text">{{ contact.notes|truncatechars:100 }}</div>
+            </div>
+            {% endif %}
+            
+            <div class="contact-status {% if contact.adopted_dogs.exists %}status-owner{% else %}status-potential{% endif %}">
+                {% if contact.adopted_dogs.exists %}
+                    Dog Owner ({{ contact.adopted_dogs.count }} dog{{ contact.adopted_dogs.count|pluralize }})
+                {% else %}
+                    Potential Adopter
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+{% if is_paginated %}
+<div class="pagination">
+    {% if page_obj.has_previous %}
+        <a href="?page={{ page_obj.previous_page_number }}{% if request.GET.charter %}&charter={{ request.GET.charter }}{% endif %}" class="pagination-link">&laquo;</a>
+    {% else %}
+        <span class="pagination-link pagination-disabled">&laquo;</span>
+    {% endif %}
+
+    {% for i in paginator.page_range %}
+        {% if page_obj.number == i %}
+            <span class="pagination-link active">{{ i }}</span>
+        {% else %}
+            <a href="?page={{ i }}{% if request.GET.charter %}&charter={{ request.GET.charter }}{% endif %}" class="pagination-link">{{ i }}</a>
+        {% endif %}
+    {% endfor %}
+
+    {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}{% if request.GET.charter %}&charter={{ request.GET.charter }}{% endif %}" class="pagination-link">&raquo;</a>
+    {% else %}
+        <span class="pagination-link pagination-disabled">&raquo;</span>
+    {% endif %}
+</div>
+{% endif %}
+
+{% else %}
+<div class="card">
+    <div class="empty-state">
+        <div class="empty-state-icon">👤</div>
+        <h3>No contacts found{% if charter %} for {{ charter.name }}{% endif %}</h3>
+        <p>Add a new contact to get started.</p>
+        <a href="{% url 'records:contact_create' %}{% if charter %}?charter={{ charter.pk }}{% endif %}" class="btn" style="margin-top: 1rem;">+ Add Contact</a>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

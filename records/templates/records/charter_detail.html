@@ -1,0 +1,347 @@
+{% extends "base.html" %}
+
+{% block title %}{{ charter.name }} - Dog Rescue Management{% endblock %}
+
+{% block extra_css %}
+<style>
+    .charter-header {
+        background: white;
+        border-radius: 12px;
+        padding: 2rem;
+        box-shadow: var(--shadow);
+        margin-bottom: 2rem;
+        border-left: 4px solid var(--primary-color);
+    }
+
+    .charter-title {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--text-color);
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .charter-meta {
+        color: var(--text-light);
+        font-size: 0.9rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 1rem;
+        margin-top: 1.5rem;
+    }
+
+    .stat-item {
+        text-align: center;
+        padding: 1rem;
+        background: var(--secondary-color);
+        border-radius: 8px;
+    }
+
+    .stat-number {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--primary-color);
+        margin-bottom: 0.25rem;
+    }
+
+    .stat-label {
+        font-size: 0.8rem;
+        color: var(--text-light);
+        font-weight: 500;
+    }
+
+    .section {
+        margin-bottom: 2rem;
+    }
+
+    .section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+    }
+
+    .section-title {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: var(--text-color);
+    }
+
+    .dogs-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 1.5rem;
+    }
+
+    .dog-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: var(--shadow);
+        transition: all 0.2s ease;
+        cursor: pointer;
+        border: 1px solid var(--border-color);
+    }
+
+    .dog-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-lg);
+    }
+
+    .dog-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 1rem;
+    }
+
+    .dog-name {
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: var(--text-color);
+    }
+
+    .dog-status {
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 500;
+    }
+
+    .status-available {
+        background: #ecfdf5;
+        color: #065f46;
+    }
+
+    .status-adopted {
+        background: #dbeafe;
+        color: #1e40af;
+    }
+
+    .dog-details {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.5rem;
+        font-size: 0.9rem;
+        color: var(--text-light);
+    }
+
+    .contacts-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 1.5rem;
+    }
+
+    .contact-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: var(--shadow);
+        transition: all 0.2s ease;
+        cursor: pointer;
+        border: 1px solid var(--border-color);
+    }
+
+    .contact-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-lg);
+    }
+
+    .contact-name {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--text-color);
+        margin-bottom: 0.5rem;
+    }
+
+    .contact-info {
+        font-size: 0.9rem;
+        color: var(--text-light);
+        line-height: 1.4;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 3rem;
+        color: var(--text-light);
+        background: white;
+        border-radius: 12px;
+        box-shadow: var(--shadow);
+    }
+
+    .empty-state-icon {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+    }
+
+    .action-buttons {
+        display: flex;
+        gap: 1rem;
+        margin-top: 1.5rem;
+    }
+
+    /* Compact Lists */
+    .compact-dogs-list, .compact-contacts-list {
+        background: white;
+        border-radius: 12px;
+        box-shadow: var(--shadow);
+        overflow: hidden;
+    }
+
+    .compact-dog-item, .compact-contact-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem 1.5rem;
+        border-bottom: 1px solid var(--border-color);
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+    }
+
+    .compact-dog-item:last-child, .compact-contact-item:last-child {
+        border-bottom: none;
+    }
+
+    .compact-dog-item:hover, .compact-contact-item:hover {
+        background-color: var(--secondary-color);
+    }
+
+    .dog-info, .contact-info {
+        flex: 1;
+    }
+
+    .dog-name, .contact-name {
+        font-weight: 600;
+        color: var(--text-color);
+        margin-bottom: 0.25rem;
+    }
+
+    .dog-meta, .contact-meta {
+        font-size: 0.9rem;
+        color: var(--text-light);
+    }
+
+    .view-more-dogs, .view-more-contacts {
+        padding: 1rem 1.5rem;
+        text-align: center;
+        background: var(--secondary-color);
+    }
+
+    .more-count {
+        color: var(--text-light);
+        font-size: 0.9rem;
+        font-weight: 500;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Charter Details</h1>
+    <div class="action-buttons">
+        <a href="{% url 'records:charter_edit' charter.pk %}" class="btn btn-secondary">Edit Charter</a>
+        <a href="{% url 'records:charter_delete' charter.pk %}" class="btn btn-danger">Delete Charter</a>
+    </div>
+</div>
+
+<!-- Charter Header -->
+<div class="charter-header">
+    <div class="charter-title">
+        🏢 {{ charter.name }}
+    </div>
+    
+    <div class="stats-grid">
+        <div class="stat-item">
+            <div class="stat-number">{{ charter_stats.total_dogs }}</div>
+            <div class="stat-label">Total Dogs</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-number">{{ charter_stats.adopted_dogs }}</div>
+            <div class="stat-label">Adopted</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-number">{{ charter_stats.available_dogs }}</div>
+            <div class="stat-label">Available</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-number">{{ charter_stats.healthy_dogs }}</div>
+            <div class="stat-label">Healthy</div>
+        </div>
+    </div>
+</div>
+
+<!-- Dogs Section -->
+<div class="section">
+    <div class="section-header">
+        <h2 class="section-title">Dogs ({{ charter_stats.total_dogs }})</h2>
+        <a href="{% url 'records:dog_create' %}?charter={{ charter.pk }}" class="btn">+ Add Dog</a>
+    </div>
+
+    {% if dogs %}
+    <div class="compact-dogs-list">
+        {% for dog in dogs|slice:"0:3" %}
+        <div class="compact-dog-item" onclick="window.location.href='{% url 'records:dog_detail' dog.pk %}'">
+            <div class="dog-info">
+                <div class="dog-name">{{ dog.name }}</div>
+                <div class="dog-meta">{{ dog.age_months }}mo • {{ dog.get_breed_display }} • {{ dog.get_gender_display }}</div>
+            </div>
+            <div class="dog-status {% if dog.is_adopted %}status-adopted{% else %}status-available{% endif %}">
+                {% if dog.is_adopted %}Adopted{% else %}Available{% endif %}
+            </div>
+        </div>
+        {% endfor %}
+        {% if dogs.count > 3 %}
+        <div class="view-more-dogs">
+            <a href="{% url 'records:dog_list' %}?charter={{ charter.pk }}" class="btn btn-secondary">View {{ dogs.count|add:"-3" }} more dogs</a>
+        </div>
+        {% endif %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-state-icon">🐕</div>
+        <h3>No dogs yet</h3>
+        <p>Add your first dog to this charter to get started.</p>
+        <a href="{% url 'records:dog_create' %}?charter={{ charter.pk }}" class="btn" style="margin-top: 1rem;">+ Add Dog</a>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Contacts Section -->
+<div class="section">
+    <div class="section-header">
+        <h2 class="section-title">Contacts ({{ contacts.count }})</h2>
+        <a href="{% url 'records:contact_create' %}?charter={{ charter.pk }}" class="btn">+ Add Contact</a>
+    </div>
+
+    {% if contacts %}
+    <div class="compact-contacts-list">
+        {% for contact in contacts|slice:"0:3" %}
+        <div class="compact-contact-item" onclick="window.location.href='{% url 'records:contact_detail' contact.pk %}'">
+            <div class="contact-info">
+                <div class="contact-name">{{ contact.name }}</div>
+                <div class="contact-meta">{{ contact.email }} • {{ contact.phone }}</div>
+            </div>
+        </div>
+        {% endfor %}
+        {% if contacts.count > 3 %}
+        <div class="view-more-contacts">
+            <a href="{% url 'records:contact_list' %}?charter={{ charter.pk }}" class="btn btn-secondary">View {{ contacts.count|add:"-3" }} more contacts</a>
+        </div>
+        {% endif %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-state-icon">👤</div>
+        <h3>No contacts yet</h3>
+        <p>Add contacts for this charter to manage adoptions and communications.</p>
+        <a href="{% url 'records:contact_create' %}?charter={{ charter.pk }}" class="btn" style="margin-top: 1rem;">+ Add Contact</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

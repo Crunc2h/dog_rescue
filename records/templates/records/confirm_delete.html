@@ -1,0 +1,309 @@
+{% extends "base.html" %}
+
+{% block title %}Delete {{ object_type }} - Dog Rescue Management{% endblock %}
+
+{% block extra_css %}
+<style>
+    .delete-container {
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 2rem;
+    }
+
+    .delete-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: var(--shadow);
+        padding: 2rem;
+        text-align: center;
+    }
+
+    .delete-icon {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+        color: #ef4444;
+    }
+
+    .delete-title {
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: var(--text-color);
+        margin-bottom: 1rem;
+    }
+
+    .delete-object-name {
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: var(--primary-color);
+        margin-bottom: 1.5rem;
+        padding: 1rem;
+        background: var(--secondary-color);
+        border-radius: 8px;
+        border-left: 4px solid var(--primary-color);
+    }
+
+    .delete-warning {
+        background: #fef2f2;
+        border: 1px solid #fecaca;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+        color: #991b1b;
+        font-size: 0.9rem;
+        line-height: 1.4;
+    }
+
+    .delete-warning-icon {
+        font-size: 1.2rem;
+        margin-right: 0.5rem;
+    }
+
+    .cascade-warning {
+        background: #fef3c7;
+        border: 1px solid #fde68a;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+        color: #92400e;
+        font-size: 0.9rem;
+        line-height: 1.4;
+    }
+
+    .cascade-warning-icon {
+        font-size: 1.2rem;
+        margin-right: 0.5rem;
+    }
+
+    .delete-description {
+        color: var(--text-light);
+        margin-bottom: 2rem;
+        line-height: 1.5;
+    }
+
+    .delete-actions {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .btn-delete {
+        background: #ef4444;
+        color: white;
+        border: none;
+        padding: 0.75rem 2rem;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        text-decoration: none;
+        display: inline-block;
+    }
+
+    .btn-delete:hover {
+        background: #dc2626;
+        transform: translateY(-1px);
+    }
+
+    .btn-cancel {
+        background: var(--secondary-color);
+        color: var(--text-color);
+        border: 1px solid var(--border-color);
+        padding: 0.75rem 2rem;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        text-decoration: none;
+        display: inline-block;
+    }
+
+    .btn-cancel:hover {
+        background: var(--border-color);
+        transform: translateY(-1px);
+    }
+
+    .object-details {
+        background: var(--secondary-color);
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+        text-align: left;
+    }
+
+    .detail-item {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 0.5rem;
+        font-size: 0.9rem;
+    }
+
+    .detail-item:last-child {
+        margin-bottom: 0;
+    }
+
+    .detail-label {
+        font-weight: 600;
+        color: var(--text-color);
+    }
+
+    .detail-value {
+        color: var(--text-light);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="delete-container">
+    <div class="delete-card">
+        <div class="delete-icon">⚠️</div>
+        <h1 class="delete-title">Delete {{ object_type }}</h1>
+        
+        <div class="delete-object-name">
+            {% if object_type == 'Charter' %}
+                🏢 {{ object.name }}
+            {% elif object_type == 'Contact' %}
+                👤 {{ object.name }}
+            {% elif object_type == 'Dog' %}
+                🐕 {{ object.name }}
+            {% else %}
+                {{ object }}
+            {% endif %}
+        </div>
+
+        {% if object_type == 'Charter' %}
+            <div class="object-details">
+                <div class="detail-item">
+                    <span class="detail-label">Charter Name:</span>
+                    <span class="detail-value">{{ object.name }}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Total Dogs:</span>
+                    <span class="detail-value">{{ object.dogs.count }}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Total Contacts:</span>
+                    <span class="detail-value">{{ object.contact_set.count }}</span>
+                </div>
+            </div>
+            
+            {% if object.dogs.count > 0 or object.contact_set.count > 0 %}
+            <div class="delete-warning">
+                <span class="delete-warning-icon">🚫</span>
+                <strong>Cannot Delete:</strong> This charter has {{ object.dogs.count }} dog{{ object.dogs.count|pluralize }} and {{ object.contact_set.count }} contact{{ object.contact_set.count|pluralize }}. 
+                You must first delete or reassign all dogs and contacts before deleting this charter.
+            </div>
+            {% endif %}
+            
+        {% elif object_type == 'Contact' %}
+            <div class="object-details">
+                <div class="detail-item">
+                    <span class="detail-label">Name:</span>
+                    <span class="detail-value">{{ object.name }}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Email:</span>
+                    <span class="detail-value">{{ object.email }}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Phone:</span>
+                    <span class="detail-value">{{ object.phone }}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Charter:</span>
+                    <span class="detail-value">{{ object.charter.name }}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Adopted Dogs:</span>
+                    <span class="detail-value">{{ object.adopted_dogs.count }}</span>
+                </div>
+            </div>
+            
+            {% if object.adopted_dogs.count > 0 %}
+            <div class="delete-warning">
+                <span class="delete-warning-icon">🚫</span>
+                <strong>Cannot Delete:</strong> This contact owns {{ object.adopted_dogs.count }} dog{{ object.adopted_dogs.count|pluralize }}. 
+                You must first reassign or delete all owned dogs before deleting this contact.
+            </div>
+            {% endif %}
+            
+        {% elif object_type == 'Dog' %}
+            <div class="object-details">
+                <div class="detail-item">
+                    <span class="detail-label">Name:</span>
+                    <span class="detail-value">{{ object.name }}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Age:</span>
+                    <span class="detail-value">{{ object.age_months }} months</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Breed:</span>
+                    <span class="detail-value">{{ object.get_breed_display }}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Gender:</span>
+                    <span class="detail-value">{{ object.get_gender_display }}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Charter:</span>
+                    <span class="detail-value">{{ object.charter.name }}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Status:</span>
+                    <span class="detail-value">
+                        {% if object.is_adopted %}
+                            Adopted by {{ object.owner.name }}
+                        {% elif object.is_available_for_adoption %}
+                            Available for Adoption
+                        {% else %}
+                            Not Available
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
+        {% endif %}
+
+        <div class="delete-warning">
+            <span class="delete-warning-icon">🚨</span>
+            <strong>This action cannot be undone.</strong> Once deleted, this {{ object_type|lower }} and all associated data will be permanently removed from the system.
+        </div>
+
+        {% if object_type == 'Charter' and object.dogs.count > 0 or object_type == 'Charter' and object.contact_set.count > 0 or object_type == 'Contact' and object.adopted_dogs.count > 0 %}
+        <p class="delete-description">
+            This {{ object_type|lower }} cannot be deleted due to database constraints. Please remove all associated data first.
+        </p>
+        {% else %}
+        <p class="delete-description">
+            Are you sure you want to delete this {{ object_type|lower }}? Please review the information above carefully before proceeding.
+        </p>
+        {% endif %}
+
+        <div class="delete-actions">
+            {% if object_type == 'Charter' and object.dogs.count > 0 or object_type == 'Charter' and object.contact_set.count > 0 %}
+                <!-- Charter cannot be deleted -->
+                <button type="button" class="btn-delete" disabled style="opacity: 0.5; cursor: not-allowed;">Cannot Delete {{ object_type }}</button>
+            {% elif object_type == 'Contact' and object.adopted_dogs.count > 0 %}
+                <!-- Contact cannot be deleted -->
+                <button type="button" class="btn-delete" disabled style="opacity: 0.5; cursor: not-allowed;">Cannot Delete {{ object_type }}</button>
+            {% else %}
+                <!-- Can be deleted -->
+                <form method="post" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn-delete">Yes, Delete {{ object_type }}</button>
+                </form>
+            {% endif %}
+            
+            {% if object_type == 'Charter' %}
+                <a href="{% url 'records:charter_detail' object.pk %}" class="btn-cancel">Cancel</a>
+            {% elif object_type == 'Contact' %}
+                <a href="{% url 'records:contact_detail' object.pk %}" class="btn-cancel">Cancel</a>
+            {% elif object_type == 'Dog' %}
+                <a href="{% url 'records:dog_detail' object.pk %}" class="btn-cancel">Cancel</a>
+            {% else %}
+                <a href="{% url 'main:dashboard' %}" class="btn-cancel">Cancel</a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
