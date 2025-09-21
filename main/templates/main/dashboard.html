@@ -199,7 +199,7 @@
         <div class="charter-card" onclick="window.location.href='{% url 'records:charter_detail' charter.pk %}'">
             <div class="charter-header">
                 <div>
-                    <div class="charter-name">{{ charter.name }}</div>
+                    <div class="charter-name">{{ charter.entity_info.name }}</div>
                 </div>
                 <span class="dog-count-badge">{{ charter.dog_count }} dog{{ charter.dog_count|pluralize }}</span>
             </div>

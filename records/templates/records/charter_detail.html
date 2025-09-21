@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}{{ charter.name }} - Dog Rescue Management{% endblock %}
+{% block title %}{{ charter.entity_info.name }} - Dog Rescue Management{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -253,7 +253,7 @@
 <!-- Charter Header -->
 <div class="charter-header">
     <div class="charter-title">
-        🏢 {{ charter.name }}
+        🏢 {{ charter.entity_info.name }}
     </div>
     
     <div class="stats-grid">
@@ -324,8 +324,8 @@
         {% for contact in contacts|slice:"0:3" %}
         <div class="compact-contact-item" onclick="window.location.href='{% url 'records:contact_detail' contact.pk %}'">
             <div class="contact-info">
-                <div class="contact-name">{{ contact.name }}</div>
-                <div class="contact-meta">{{ contact.email }} • {{ contact.phone }}</div>
+                <div class="contact-name">{{ contact.entity_info.name }}</div>
+                <div class="contact-meta">{{ contact.entity_info.email }} • {{ contact.entity_info.phone }}</div>
             </div>
         </div>
         {% endfor %}

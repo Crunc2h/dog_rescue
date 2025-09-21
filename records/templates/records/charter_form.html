@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
 {% block title %}
-    {% if object %}Edit Charter - {{ object.name }}{% else %}Create Charter{% endif %} - Dog Rescue Management
+    {% if object %}Edit Charter - {{ object.entity_info.name }}{% else %}Create Charter{% endif %} - Dog Rescue Management
 {% endblock %}
 
 {% block extra_css %}
@@ -192,6 +192,53 @@
                         <div class="form-error">{{ form.name.errors.0 }}</div>
                     {% endif %}
                     <div class="form-help">The official name of the charter organization</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="{{ form.email.id_for_label }}" class="form-label">
+                        Email Address
+                    </label>
+                    <input type="email" 
+                           name="email" 
+                           id="{{ form.email.id_for_label }}" 
+                           class="form-input" 
+                           placeholder="Enter email address"
+                           value="{{ form.email.value|default:'' }}">
+                    {% if form.email.errors %}
+                        <div class="form-error">{{ form.email.errors.0 }}</div>
+                    {% endif %}
+                    <div class="form-help">Contact email for the charter organization</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="{{ form.phone.id_for_label }}" class="form-label">
+                        Phone Number
+                    </label>
+                    <input type="tel" 
+                           name="phone" 
+                           id="{{ form.phone.id_for_label }}" 
+                           class="form-input" 
+                           placeholder="Enter phone number"
+                           value="{{ form.phone.value|default:'' }}">
+                    {% if form.phone.errors %}
+                        <div class="form-error">{{ form.phone.errors.0 }}</div>
+                    {% endif %}
+                    <div class="form-help">Contact phone number for the charter organization</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="{{ form.address.id_for_label }}" class="form-label">
+                        Address
+                    </label>
+                    <textarea name="address" 
+                              id="{{ form.address.id_for_label }}" 
+                              class="form-input" 
+                              placeholder="Enter organization address"
+                              rows="3">{{ form.address.value|default:'' }}</textarea>
+                    {% if form.address.errors %}
+                        <div class="form-error">{{ form.address.errors.0 }}</div>
+                    {% endif %}
+                    <div class="form-help">Physical address of the charter organization</div>
                 </div>
             </div>
 

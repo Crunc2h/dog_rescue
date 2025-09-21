@@ -190,7 +190,7 @@
 <div class="breadcrumb">
     <a href="{% url 'main:dashboard' %}">Dashboard</a>
     {% if charter %}
-        > <a href="{% url 'records:charter_detail' charter.pk %}">{{ charter.name }}</a>
+        > <a href="{% url 'records:charter_detail' charter.pk %}">{{ charter.entity_info.name }}</a>
         > Dogs
     {% else %}
         > All Dogs
@@ -243,9 +243,18 @@
     <div class="dog-card" onclick="window.location.href='{% url 'records:dog_detail' dog.pk %}'">
         <div class="dog-header">
             <div class="dog-name">{{ dog.name }}</div>
-            <div class="dog-status {% if dog.is_adopted %}status-adopted{% else %}status-available{% endif %}">
-                {% if dog.is_adopted %}Adopted{% else %}Available{% endif %}
+            <div class="dog-status {% if dog.adoption_status == 'ADOPTED' %}status-adopted{% else %}status-available{% endif %}">
+                {{ dog.get_adoption_status_display }}
             </div>
+        </div>
+        <div class="dog-thumbnail">
+            {% if dog.display_photo %}
+                {% if dog.display_photo.url %}
+                    <img src="{{ dog.display_photo.url }}" alt="{{ dog.name }}" style="width: 100%; height: 150px; object-fit: cover; border-radius: 8px;">
+                {% else %}
+                    <img src="{{ dog.display_photo }}" alt="{{ dog.name }}" style="width: 100%; height: 150px; object-fit: cover; border-radius: 8px;">
+                {% endif %}
+            {% endif %}
         </div>
         <div class="dog-details">
             <div><strong>Age:</strong> {{ dog.age_months }} months</div>
@@ -255,7 +264,7 @@
         </div>
         {% if not charter %}
         <div class="dog-charter">
-            {{ dog.charter.name }}
+            {{ dog.charter.entity_info.name }}
         </div>
         {% endif %}
     </div>

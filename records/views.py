@@ -33,9 +33,9 @@ class CharterDetailView(LoginRequiredMixin, DetailView):
             'contacts': contacts,
             'charter_stats': {
                 'total_dogs': dogs.count(),
-                'adopted_dogs': dogs.filter(is_adopted=True).count(),
-                'available_dogs': dogs.filter(is_available_for_adoption=True).count(),
-                'healthy_dogs': dogs.filter(health_status='H').count(),
+                'adopted_dogs': dogs.filter(adoption_status='ADOPTED').count(),
+                'available_dogs': dogs.filter(eligible_for_adoption=True, adoption_status='I').count(),
+                'healthy_dogs': dogs.filter(health_status='HEALTHY').count(),
             }
         })
         return context
@@ -50,7 +50,7 @@ class CharterCreateView(LoginRequiredMixin, CreateView):
         return reverse_lazy('records:charter_detail', kwargs={'pk': self.object.pk})
 
     def form_valid(self, form):
-        messages.success(self.request, f'Charter "{form.instance.name}" created successfully!')
+        messages.success(self.request, f'Charter "{form.instance.entity_info.name}" created successfully!')
         return super().form_valid(form)
 
 
@@ -63,7 +63,7 @@ class CharterUpdateView(LoginRequiredMixin, UpdateView):
         return reverse_lazy('records:charter_detail', kwargs={'pk': self.object.pk})
 
     def form_valid(self, form):
-        messages.success(self.request, f'Charter "{form.instance.name}" updated!')
+        messages.success(self.request, f'Charter "{form.instance.entity_info.name}" updated!')
         return super().form_valid(form)
 
 
@@ -92,7 +92,7 @@ class CharterDeleteView(LoginRequiredMixin, DeleteView):
             messages.error(request, error_msg)
             return redirect('records:charter_detail', pk=charter.pk)
         
-        messages.success(request, f'Charter "{charter.name}" has been deleted.')
+        messages.success(request, f'Charter "{charter.entity_info.name}" has been deleted.')
         return super().delete(request, *args, **kwargs)
 
 # =============================================================================
@@ -120,7 +120,7 @@ class ContactCreateView(LoginRequiredMixin, CreateView):
         return reverse_lazy('records:contact_detail', kwargs={'pk': self.object.pk})
 
     def form_valid(self, form):
-        messages.success(self.request, f'Contact "{form.instance.name}" has been added!')
+        messages.success(self.request, f'Contact "{form.instance.entity_info.name}" has been added!')
         return super().form_valid(form)
 
     def get_initial(self):
@@ -141,7 +141,7 @@ class ContactUpdateView(LoginRequiredMixin, UpdateView):
         return reverse_lazy('records:contact_detail', kwargs={'pk': self.object.pk})
 
     def form_valid(self, form):
-        messages.success(self.request, f'Contact "{form.instance.name}" has been updated!')
+        messages.success(self.request, f'Contact "{form.instance.entity_info.name}" has been updated!')
         return super().form_valid(form)
 
 
@@ -150,9 +150,7 @@ class ContactDeleteView(LoginRequiredMixin, DeleteView):
     template_name = 'records/confirm_delete.html'
 
     def get_success_url(self):
-        if self.object.charter:
-            return reverse_lazy('records:charter_detail',
-                                kwargs={'pk': self.object.charter.pk})
+        # Contact doesn't have charter field anymore, return to dashboard
         return reverse_lazy('main:dashboard')
 
     def get_context_data(self, **kwargs):
@@ -174,7 +172,7 @@ class ContactDeleteView(LoginRequiredMixin, DeleteView):
             messages.error(request, error_msg)
             return redirect('records:contact_detail', pk=contact.pk)
         
-        messages.success(request, f'Contact "{contact.name}" has been deleted.')
+        messages.success(request, f'Contact "{contact.entity_info.name}" has been deleted.')
         return super().delete(request, *args, **kwargs)
 # =============================================================================
 # DOG VIEWS
@@ -290,24 +288,13 @@ class ContactListView(LoginRequiredMixin, ListView):
     paginate_by = 20  # Pagination for large lists
 
     def get_queryset(self):
-        queryset = Contact.objects.select_related('charter').all()
-        charter_id = self.request.GET.get('charter')
-        if charter_id:
-            queryset = queryset.filter(charter_id=charter_id)
+        queryset = Contact.objects.select_related('entity_info').all()
+        # Note: Contact doesn't have charter field anymore
         return queryset.order_by('-created')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        charter_id = self.request.GET.get('charter')
-        if charter_id:
-            try:
-                charter = Charter.objects.get(id=charter_id)
-                context['charter'] = charter
-                context['page_title'] = f'Contacts in {charter.name}'
-            except Charter.DoesNotExist:
-                pass
-        else:
-            context['page_title'] = 'All Contacts'
+        context['page_title'] = 'All Contacts'
         return context
 
 

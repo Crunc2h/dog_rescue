@@ -190,7 +190,7 @@
 <div class="breadcrumbs">
     <a href="{% url 'main:dashboard' %}">Dashboard</a>
     <span>/</span>
-    <a href="{% url 'records:charter_detail' charter.pk %}">{{ charter.name }}</a>
+    <a href="{% url 'records:charter_detail' charter.pk %}">{{ charter.entity_info.name }}</a>
     <span>/</span>
     <span>Contacts</span>
 </div>
@@ -201,25 +201,25 @@
     {% for contact in contacts %}
     <div class="contact-card" onclick="window.location.href='{% url 'records:contact_detail' contact.pk %}'">
         <div class="contact-card-header">
-            <div class="contact-card-name">{{ contact.name }}</div>
-            <div class="contact-card-charter">{{ contact.charter.name }}</div>
+            <div class="contact-card-name">{{ contact.entity_info.name }}</div>
+            <div class="contact-card-charter">{{ contact.charter.entity_info.name }}</div>
         </div>
         <div class="contact-card-content">
             <div class="contact-info-item">
                 <span class="contact-info-icon">📧</span>
                 <span class="contact-info-text">
-                    <a href="mailto:{{ contact.email }}">{{ contact.email }}</a>
+                    <a href="mailto:{{ contact.entity_info.email }}">{{ contact.entity_info.email }}</a>
                 </span>
             </div>
             <div class="contact-info-item">
                 <span class="contact-info-icon">📞</span>
                 <span class="contact-info-text">
-                    <a href="tel:{{ contact.phone }}">{{ contact.phone }}</a>
+                    <a href="tel:{{ contact.entity_info.phone }}">{{ contact.entity_info.phone }}</a>
                 </span>
             </div>
             <div class="contact-info-item">
                 <span class="contact-info-icon">📍</span>
-                <span class="contact-info-text">{{ contact.address|truncatechars:50 }}</span>
+                <span class="contact-info-text">{{ contact.entity_info.address|truncatechars:50 }}</span>
             </div>
             
             {% if contact.notes %}
@@ -268,7 +268,7 @@
 <div class="card">
     <div class="empty-state">
         <div class="empty-state-icon">👤</div>
-        <h3>No contacts found{% if charter %} for {{ charter.name }}{% endif %}</h3>
+        <h3>No contacts found{% if charter %} for {{ charter.entity_info.name }}{% endif %}</h3>
         <p>Add a new contact to get started.</p>
         <a href="{% url 'records:contact_create' %}{% if charter %}?charter={{ charter.pk }}{% endif %}" class="btn" style="margin-top: 1rem;">+ Add Contact</a>
     </div>

@@ -18,12 +18,12 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         # Global statistics
         context.update({
             'total_dogs': Dog.objects.count(),
-            'adopted_dogs': Dog.objects.filter(is_adopted=True).count(),
-            'available_dogs': Dog.objects.filter(is_available_for_adoption=True).count(),
-            'healthy_dogs': Dog.objects.filter(health_status='H').count(),
+            'adopted_dogs': Dog.objects.filter(adoption_status='ADOPTED').count(),
+            'available_dogs': Dog.objects.filter(eligible_for_adoption=True, adoption_status='I').count(),
+            'healthy_dogs': Dog.objects.filter(health_status='HEALTHY').count(),
             'charters': Charter.objects.annotate(
                 dog_count=Count('dogs'),
-                adopted_count=Count('dogs', filter=Q(dogs__is_adopted=True))
+                adopted_count=Count('dogs', filter=Q(dogs__adoption_status='ADOPTED'))
             ).all(),
         })
         return context

@@ -1,10 +1,80 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-</head>
-<body>
+{% extends "base.html" %}
 
-</body>
-</html>
+{% block title %}{{ dog.name }} - Dog Rescue Management{% endblock %}
+
+{% block content %}
+<div class="dog-header">
+    <h1 class="dog-title">
+        🐕 {{ dog.name }}
+    </h1>
+    
+    <div class="dog-photo">
+        {% if dog.display_photo %}
+            {% if dog.display_photo.url %}
+                <img src="{{ dog.display_photo.url }}" alt="{{ dog.name }}" style="max-width: 300px; max-height: 300px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+            {% else %}
+                <img src="{{ dog.display_photo }}" alt="{{ dog.name }}" style="max-width: 300px; max-height: 300px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+            {% endif %}
+        {% endif %}
+    </div>
+    
+    <div class="dog-meta">
+        Dog created on {{ dog.created|date:"F j, Y" }}
+    </div>
+
+    <div class="dog-info">
+        <div class="info-card">
+            <div class="info-label">Age</div>
+            <div class="info-value">{{ dog.age_months }} months</div>
+        </div>
+
+        <div class="info-card">
+            <div class="info-label">Breed</div>
+            <div class="info-value">{{ dog.get_breed_display }}</div>
+        </div>
+
+        <div class="info-card">
+            <div class="info-label">Gender</div>
+            <div class="info-value">{{ dog.get_gender_display }}</div>
+        </div>
+
+        <div class="info-card">
+            <div class="info-label">Health Status</div>
+            <div class="info-value">{{ dog.get_health_status_display }}</div>
+        </div>
+
+        <div class="info-card">
+            <div class="info-label">Adoption Status</div>
+            <div class="info-value">{{ dog.get_adoption_status_display }}</div>
+        </div>
+
+        {% if dog.charter %}
+        <div class="info-card">
+            <div class="info-label">Charter</div>
+            <div class="info-value">{{ dog.charter.entity_info.name }}</div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="actions">
+        <a href="{% url 'records:dog_update' dog.pk %}" class="btn btn-primary">
+            ✏️ Edit Dog
+        </a>
+        <a href="{% url 'records:dog_delete' dog.pk %}" class="btn btn-danger">
+            🗑️ Delete Dog
+        </a>
+        <a href="{% url 'main:dashboard' %}" class="btn btn-secondary">
+            ← Back to Dashboard
+        </a>
+    </div>
+</div>
+
+{% if dog.detailed_description %}
+<div class="description-section">
+    <h2 class="section-title">Description</h2>
+    <div class="description-content">
+        {{ dog.detailed_description|linebreaks }}
+    </div>
+</div>
+{% endif %}
+{% endblock %}

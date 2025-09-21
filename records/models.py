@@ -20,6 +20,13 @@ class DogBreed(models.TextChoices):
     MIXED = 'MIXED', 'Mixed Breed'
     GOLDEN_RETRIEVER = 'GOLDEN', 'Golden Retriever'
     GERMAN_SHEPHERD = 'GERMAN', 'German Shepherd'
+    LABRADOR = 'LAB', 'Labrador Retriever'
+    BEAGLE = 'BEAGLE', 'Beagle'
+    BULLDOG = 'BULL', 'Bulldog'
+    PITBULL = 'PIT', 'Pit Bull'
+    HUSKY = 'HUSKY', 'Siberian Husky'
+    CHIHUAHUA = 'CHI', 'Chihuahua'
+    POMERANIAN = 'POM', 'Pomeranian'
     OTHER = 'OTHER', 'Other'
 class DogIntakeReasons(models.TextChoices):
     RESCUE = 'R', 'Rescue'
@@ -28,6 +35,15 @@ class DogColor(models.TextChoices):
     BLACK = 'B', 'Black'
     WHITE = 'W', 'White'
     GRAY = 'G', 'Gray'
+    BROWN = 'BR', 'Brown'
+    TAN = 'T', 'Tan'
+    CREAM = 'C', 'Cream'
+    GOLDEN = 'GOLD', 'Golden'
+    RED = 'R', 'Red'
+    BLUE = 'BL', 'Blue'
+    MULTI_COLOR = 'MC', 'Multi-Color'
+    SPOTTED = 'SP', 'Spotted'
+    STRIPED = 'ST', 'Striped'
 class DogHealthStatus(models.TextChoices):
     HEALTHY = 'H', 'Healthy'
     SICK = 'S', 'Sick'
@@ -82,6 +98,7 @@ class Contact(models.Model):
     modified = models.DateTimeField()
 
     entity_info = models.OneToOneField(EntityInfo, on_delete=models.PROTECT)
+    notes = models.TextField(blank=True)
 
     def save(self, *args, **kwargs):
         if not self.id:
@@ -129,6 +146,9 @@ class Dog(models.Model):
     height_cm = models.FloatField()
     color = models.CharField(choices=DogColor.choices, max_length=32)
     detailed_description = models.TextField(blank=True)
+    
+    # Default photo for the dog
+    default_photo = models.ImageField(upload_to=PHOTOS, blank=True, null=True, help_text="Default photo for this dog")
 
     # Health Info
     health_status = models.CharField(choices=DogHealthStatus.choices, max_length=32, default=DogHealthStatus.HEALTHY)
@@ -147,29 +167,56 @@ class Dog(models.Model):
     def __str__(self):
         return self.name
     
+    @property
+    def display_photo(self):
+        """
+        Returns the best available photo for this dog.
+        Priority: profile photo from DogPhotoRecord -> first photo -> default photo
+        """
+            
+        profile_photo = self.photos.filter(is_profile_photo=True).first()
+        if profile_photo and profile_photo.photo:
+            return profile_photo.photo
+        
+        first_photo = self.photos.filter(photo__isnull=False).first()
+        if first_photo and first_photo.photo:
+            return first_photo.photo
+
+        if self.default_photo:
+            return self.default_photo
+        
+        # Return a static default photo path
+        return '/static/images/default-dog.png'
+    
     def save(self, *args, **kwargs):
-        if not self.id:
+        is_new = not self.id
+        if is_new:
             self.name = self.name.title()
             self.created = timezone.now()
-            if self.current_weight_kg:
-                self.weight_history.create(weight_kg=self.current_weight_kg)
+        self.modified = timezone.now()
+
         
-        if self.eligible_for_adoption and self.adoption_status == AdoptionStatus.NOT_AVAILABLE:
-            self.adoption_status = AdoptionStatus.IDLE
-        elif not self.eligible_for_adoption and self.adoption_status == AdoptionStatus.IDLE:
-            self.adoption_status = AdoptionStatus.NOT_AVAILABLE
-        
-        if self.health_status == DogHealthStatus.PASSED_AWAY:
+        # Adoption status and eligibility for adoption are only updated from the DogAdoptionRecord models update method
+        # This is only overridden in case of dog passing away
+        if self.health_status == DogHealthStatus.PASSED_AWAY and self.adoptions.filter(is_active=True).count() != 0:
             self.eligible_for_adoption = False
             self.adoption_status = AdoptionStatus.NOT_AVAILABLE
-        self.modified = timezone.now()
+            for adoption_record in self.adoptions.all():
+                adoption_record.force_close_record()
+
         super().save(*args, **kwargs)
+        
+
+        if is_new and self.current_weight_kg:
+            self.weight_history.create(weight_kg=self.current_weight_kg)
 
     def clean(self):
         if self.microchip_status == TripleChoice.YES and not self.microchip_id:
             raise ValidationError('Microchip ID is required when microchip state is Yes')
         if Dog.objects.filter(microchip_id=self.microchip_id).exists():
             raise ValidationError('Microchip ID already exists')
+        if self.intake_reason == DogIntakeReasons.TRAINING and not self.owner:
+            raise ValidationError('Owner is required if the dog is being trained')
         if self.health_status == DogHealthStatus.PASSED_AWAY:
             if not self.passing_date:
                 raise ValidationError('Passing date is required if the dog is passed away')
@@ -177,6 +224,13 @@ class Dog(models.Model):
                 raise ValidationError('Passing reason is required if the dog is passed away')
             if not self.burial_place:
                 raise ValidationError('Burial place is required if the dog is passed away')
+
+        if self.eligible_for_adoption and self.adoption_status == AdoptionStatus.NOT_AVAILABLE:
+            raise ValidationError('Dog is eligible for adoption but is not available for adoption')
+        elif not self.eligible_for_adoption and self.adoption_status == AdoptionStatus.IDLE:
+            raise ValidationError('Dog is not eligible for adoption but is available for adoption')
+        if self.health_status == DogHealthStatus.PASSED_AWAY and (self.adoption_status != AdoptionStatus.NOT_AVAILABLE or self.eligible_for_adoption):
+            raise ValidationError('Dog is passed away but is available or eligible for adoption')
         
         matching_dogs = self.charter.dogs.filter(name=self.name)
         for match in matching_dogs:
@@ -191,12 +245,13 @@ class DogWeightRecord(models.Model):
     dog = models.ForeignKey(Dog, on_delete=models.CASCADE, related_name='weight_history')
     
     class Meta:
-        ordering = ['-recorded_date']
+        ordering = ['-record_date']
 
     def save(self, *args, **kwargs):
-        if not self.id:
-            self.dog.current_weight_kg = self.dog.weight_history.last().weight_kg
         super().save(*args, **kwargs)
+        if self.dog:
+            self.dog.current_weight_kg = self.weight_kg
+            self.dog.save(update_fields=['current_weight_kg'])
     def clean(self):
         if self.weight_kg <= 0:
             raise ValidationError('Weight must be greater than 0')
@@ -230,7 +285,7 @@ class DogDocumentRecord(models.Model):
     
     
     class Meta:
-        ordering = ['-uploaded_at']
+        ordering = ['-uploaded']
     
     def __str__(self):
         return f"{self.dog.name} - {self.title}"
@@ -258,7 +313,7 @@ class DogAdoptionRecord(models.Model):
         self.modified = timezone.now()
 
         if self.is_active:
-            if not self.dog.eligible_for_adoption:
+            if not self.dog.eligible_for_adoption or self.dog.adoption_status == AdoptionStatus.NOT_AVAILABLE:
                 raise ValidationError('Dog is not eligible for adoption')
             for adoption in self.dog.adoptions.all():
                 if adoption.id != self.id and adoption.is_active:
@@ -274,7 +329,6 @@ class DogAdoptionRecord(models.Model):
             
             self.dog.eligible_for_adoption = False
             self.dog.adoption_status = AdoptionStatus.TRIAL
-
             self.adoptee.adoption_status = AdoptionStatus.TRIAL
         elif self.result == AdoptionResult.APPROVED:
             self.is_active = False
@@ -283,7 +337,6 @@ class DogAdoptionRecord(models.Model):
             self.dog.eligible_for_adoption = False
             self.dog.adoption_status = AdoptionStatus.ADOPTED
             self.dog.owner = self.adoptee
-            
             self.adoptee.adoption_status = AdoptionStatus.IDLE
         
         elif self.result == AdoptionResult.REJECTED:
@@ -292,10 +345,18 @@ class DogAdoptionRecord(models.Model):
             
             self.dog.eligible_for_adoption = True
             self.dog.adoption_status = AdoptionStatus.IDLE
-
             self.adoptee.adoption_status = AdoptionStatus.IDLE
         self.dog.save()
         self.adoptee.save()
+
+    ### DO NOT USE, ONLY CALLED IF THE DOG IS PASSED AWAY
+    def force_close_record(self):
+        self.is_active = False
+        self.result = AdoptionResult.REJECTED
+        self.end_date = timezone.now()
+        self.adoptee.adoption_status = AdoptionStatus.IDLE
+        self.adoptee.save()
+        self.save()
 
 
 
