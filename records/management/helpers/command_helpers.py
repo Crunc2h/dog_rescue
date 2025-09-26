@@ -52,75 +52,100 @@ UNSUCCESSFUL_ADOPTION_NOTES = [
         "Family decided they preferred a different breed."
 ]
 
-ADOPTION_SUCCESS_RATE = 0.45
-ADOPTION_ONGOING_RATE = 0.35
-ADOPTION_UNSUCCESSFUL_RATE = 0.2
+ADOPTION_SUCCESS_RATE_MIN = 0.40
+ADOPTION_SUCCESS_RATE_MAX = 0.60
+ADOPTION_ONGOING_RATE_MIN = 0.20
+ADOPTION_ONGOING_RATE_MAX = 0.30
+ADOPTION_UNSUCCESSFUL_RATE_MIN = 0.15
+ADOPTION_UNSUCCESSFUL_RATE_MAX = 0.20
+
+def get_adoption_values():
+    success_rate = random.uniform(ADOPTION_SUCCESS_RATE_MIN, ADOPTION_SUCCESS_RATE_MAX)
+    ongoing_rate = random.uniform(ADOPTION_ONGOING_RATE_MIN, ADOPTION_ONGOING_RATE_MAX)
+    unsuccessful_rate = random.uniform(ADOPTION_UNSUCCESSFUL_RATE_MIN, ADOPTION_UNSUCCESSFUL_RATE_MAX)
+    total = success_rate + ongoing_rate + unsuccessful_rate
+    scale = 1 / total
+    success_rate *= scale
+    ongoing_rate *= scale
+    unsuccessful_rate *= scale
+    return {
+        "success_rate": success_rate,
+        "ongoing_rate": ongoing_rate,
+        "unsuccessful_rate": unsuccessful_rate
+    }
 
 
 
 def create_adoption_processes():
-    """Create adoption processes between adoptees and dogs for all charters."""
+    """Create adoption processes between adoptees and dogs for all charters."""                                                                                                                                             
     from records.models import AdoptionResult, AdoptionStatus
-    
-    available_dogs = [dog for dog in Dog.objects.all() if dog.adoption_status == AdoptionStatus.FIT]
-    available_adoptees = [adoptee for adoptee in Adoptee.objects.all() if adoptee.adoption_status == AdoptionStatus.FIT]
-
-    if not available_dogs or len(available_adoptees) == 0:
-        return 0, 0, 0
-
-
-    adoption_count = min(len(available_dogs), len(available_adoptees))
-    
-    selected_dogs = random.sample(available_dogs, adoption_count)
-    selected_adoptees = random.sample(available_adoptees, adoption_count)
     
     successful_adoptions = 0
     unsuccessful_adoptions = 0
     ongoing_adoptions = 0
 
-    for i in range(adoption_count):
-        dog = selected_dogs[i]
-        adoptee = selected_adoptees[i]
+    # Process each charter separately
+    for charter in Charter.objects.all():
+        # Get available dogs and adoptees for this specific charter
+        available_dogs = [dog for dog in charter.dogs.all() if dog.adoption_status == AdoptionStatus.FIT]
+        available_adoptees = [adoptee for adoptee in Adoptee.objects.filter(charter=charter) if adoptee.adoption_status == AdoptionStatus.FIT]
+
+        if not available_dogs or len(available_adoptees) == 0:
+            continue
+
+        # Create adoption processes for this charter - aim for 80-100% of available adoptees
+        max_adoptions = min(len(available_dogs), len(available_adoptees))
+        adoption_count = int(max_adoptions * random.uniform(0.8, 1.0))
+        
+        selected_dogs = random.sample(available_dogs, adoption_count)
+        selected_adoptees = random.sample(available_adoptees, adoption_count)
+        
+        # Get adoption values for this charter (different percentages per charter)
+        adoption_values = get_adoption_values()
+        
+        for i in range(adoption_count):
+            dog = selected_dogs[i]
+            adoptee = selected_adoptees[i]
+
+            roll = random.random()
+            if roll <= adoption_values["success_rate"]:
+                result = AdoptionResult.APPROVED
+                is_active = True  # Set to True initially, let the model handle it
+                notes = random.choice(ADOPTION_NOTES)
+                successful_adoptions += 1
+            elif roll <= adoption_values["success_rate"] + adoption_values["ongoing_rate"]:
+                result = AdoptionResult.EVALUATION
+                is_active = True
+                notes = random.choice(ADOPTION_NOTES)
+                ongoing_adoptions += 1
+            else:
+                result = AdoptionResult.REJECTED
+                is_active = True  # Set to True initially, let the model handle it
+                notes = random.choice(UNSUCCESSFUL_ADOPTION_NOTES)
+                unsuccessful_adoptions += 1
+            
+            start_date = timezone.now() - timezone.timedelta(days=random.randint(1, 90))
+            if result == AdoptionResult.APPROVED:
+                end_date = start_date + timezone.timedelta(days=random.randint(1, 30))
+            elif result == AdoptionResult.REJECTED:
+                end_date = start_date + timezone.timedelta(days=random.randint(1, 16))
+            else:
+                end_date = None
+            
+            adoption_record = DogAdoptionRecord(
+                adoptee=adoptee,
+                dog=dog,
+                result=result,
+                notes=notes,
+                start_date=start_date,
+                end_date=end_date,
+                is_active=is_active,
+                created=timezone.now(),
+                modified=timezone.now()
+            )
+            
+            adoption_record.save()
     
-        
-        roll = random.random()
-        if roll <= ADOPTION_SUCCESS_RATE:
-            result = AdoptionResult.APPROVED
-            is_active = True  # Set to True initially, let the model handle it
-            notes = random.choice(ADOPTION_NOTES)
-            successful_adoptions += 1
-        elif roll <= ADOPTION_SUCCESS_RATE + ADOPTION_ONGOING_RATE:
-            result = AdoptionResult.EVALUATION
-            is_active = True
-            notes = random.choice(ADOPTION_NOTES)
-            ongoing_adoptions += 1
-        else:
-            result = AdoptionResult.REJECTED
-            is_active = True  # Set to True initially, let the model handle it
-            notes = random.choice(UNSUCCESSFUL_ADOPTION_NOTES)
-            unsuccessful_adoptions += 1
-        
-        start_date = timezone.now() - timezone.timedelta(days=random.randint(1, 90))
-        if result == AdoptionResult.APPROVED:
-            end_date = start_date + timezone.timedelta(days=random.randint(1, 30))
-        elif result == AdoptionResult.REJECTED:
-            end_date = start_date + timezone.timedelta(days=random.randint(1, 16))
-        else:
-            end_date = None
-        
-        adoption_record = DogAdoptionRecord(
-            adoptee=adoptee,
-            dog=dog,
-            result=result,
-            notes=notes,
-            start_date=start_date,
-            end_date=end_date,
-            is_active=is_active,
-            created=timezone.now(),
-            modified=timezone.now()
-        )
-        
-        adoption_record.save()
     return successful_adoptions, ongoing_adoptions, unsuccessful_adoptions
 
 FIRST_NAMES = [
@@ -205,16 +230,12 @@ def create_contacts_or_adoptees_for_charter(charter, count, create_adoptees=Fals
             contact_or_adoptee_created = Adoptee(
                 entity_info=entity_info,
                 charter=charter,
-                notes=notes,
-                created=timezone.now(),
-                modified=timezone.now()
+                notes=notes
             )
         else:
             contact_or_adoptee_created = Contact(
                 entity_info=entity_info,
-                notes=notes,
-                created=timezone.now(),
-                modified=timezone.now()
+                notes=notes
             )
         created.append(contact_or_adoptee_created)
     
@@ -225,16 +246,72 @@ def create_contacts_or_adoptees_for_charter(charter, count, create_adoptees=Fals
         Contact.objects.bulk_create(created)
     return len(created)
 
-def create_dogs(count_min, count_max, charter=None):
-    """Create dogs for a specific charter or all charters."""
+
+DOG_HEALTHY_RATE_MIN = 0.75
+DOG_HEALTHY_RATE_MAX = 0.90
+DOG_SICK_RATE_MIN = 0.05
+DOG_SICK_RATE_MAX = 0.15
+DOG_PASSED_AWAY_RATE_MIN = 0.05
+DOG_PASSED_AWAY_RATE_MAX = 0.08
+DOG_UNSPECIFIED_RATE_MIN = 0.03
+DOG_UNSPECIFIED_RATE_MAX = 0.05
+
+def get_health_values_for_charter():
+    healthy_rate = random.uniform(DOG_HEALTHY_RATE_MIN, DOG_HEALTHY_RATE_MAX)
+    unspecified_rate = random.uniform(DOG_UNSPECIFIED_RATE_MIN, DOG_UNSPECIFIED_RATE_MAX)
+    sick_rate = random.uniform(DOG_SICK_RATE_MIN, DOG_SICK_RATE_MAX)
+    passed_away_rate = random.uniform(DOG_PASSED_AWAY_RATE_MIN, DOG_PASSED_AWAY_RATE_MAX)
+    total = healthy_rate + unspecified_rate + sick_rate + passed_away_rate
+    scale = 1.0 / total
+    healthy_rate *= scale
+    unspecified_rate *= scale
+    sick_rate *= scale
+    passed_away_rate *= scale
+    return {
+        "healthy_rate": healthy_rate,
+        "unspecified_rate": unspecified_rate,
+        "sick_rate": sick_rate,
+        "passed_away_rate": passed_away_rate
+    }
+
+DOG_VACCINATION_COMPLETE_RATE_MIN = 0.40
+DOG_VACCINATION_COMPLETE_RATE_MAX = 0.50
+DOG_VACCINATION_INCOMPLETE_RATE_MIN = 0.10
+DOG_VACCINATION_INCOMPLETE_RATE_MAX = 0.15
+DOG_VACCINATION_NOT_VACCINATED_RATE_MIN = 0.05
+DOG_VACCINATION_NOT_VACCINATED_RATE_MAX = 0.08
+DOG_VACCINATION_UNSPECIFIED_RATE_MIN = 0.03
+DOG_VACCINATION_UNSPECIFIED_RATE_MAX = 0.05
+
+def get_vaccination_values_for_charter():
+    complete_rate = random.uniform(DOG_VACCINATION_COMPLETE_RATE_MIN, DOG_VACCINATION_COMPLETE_RATE_MAX)
+    incomplete_rate = random.uniform(DOG_VACCINATION_INCOMPLETE_RATE_MIN, DOG_VACCINATION_INCOMPLETE_RATE_MAX)
+    not_vaccinated_rate = random.uniform(DOG_VACCINATION_NOT_VACCINATED_RATE_MIN, DOG_VACCINATION_NOT_VACCINATED_RATE_MAX)
+    unspecified_rate = random.uniform(DOG_VACCINATION_UNSPECIFIED_RATE_MIN, DOG_VACCINATION_UNSPECIFIED_RATE_MAX)
+    total = complete_rate + incomplete_rate + not_vaccinated_rate + unspecified_rate
+    scale = 1.0 / total
+    complete_rate *= scale
+    incomplete_rate *= scale
+    not_vaccinated_rate *= scale
+    unspecified_rate *= scale
+    return {
+        "complete_rate": complete_rate,
+        "incomplete_rate": incomplete_rate,
+        "not_vaccinated_rate": not_vaccinated_rate,
+        "unspecified_rate": unspecified_rate
+    }
     
 
+def create_dogs(count_min, count_max, charter=None):
+    """Create dogs for a specific charter or all charters."""
     healthy, sick, passed, unspecified = [], [], [], []
     
     if charter:
+        health_values = get_health_values_for_charter()
+        vaccination_values = get_vaccination_values_for_charter()
         count = random.randint(count_min, count_max)
         for i in range(count):
-            dog = get_random_dog(charter)
+            dog = get_random_dog(health_values, vaccination_values, charter)
             if dog.health_status == DogHealthStatus.HEALTHY:
                 healthy.append(dog)
             elif dog.health_status == DogHealthStatus.SICK:
@@ -245,9 +322,11 @@ def create_dogs(count_min, count_max, charter=None):
                 unspecified.append(dog)
     else:
         for charter in Charter.objects.all():
+            health_values = get_health_values_for_charter()
+            vaccination_values = get_vaccination_values_for_charter()
             count = random.randint(count_min, count_max)
             for i in range(count):
-                dog = get_random_dog(charter)
+                dog = get_random_dog(health_values, vaccination_values, charter)
                 if dog.health_status == DogHealthStatus.HEALTHY:
                     healthy.append(dog)
                 elif dog.health_status == DogHealthStatus.SICK:
@@ -359,12 +438,9 @@ DOG_SPECIAL_NEEDS = [
         "Requires special harness due to neck sensitivity."
     ]
 
-DOG_HEALTHY_RATE = 0.80
-DOG_UNSPECIFIED_RATE = 0.08
-DOG_SICK_RATE = 0.08
-DOG_PASSED_AWAY_RATE = 0.04
 
-def get_random_dog(charter):
+
+def get_random_dog(health_values, vaccination_values, charter):
     name = random.choice(DOG_NAMES)
     age_months = random.randint(2, 120)
     gender = random.choice([DogGender.MALE, DogGender.FEMALE, DogGender.UNSPECIFIED])
@@ -414,15 +490,25 @@ def get_random_dog(charter):
         microchip_id = f"CHIP{random.randint(100000, 999999)}"
 
     health_roll = random.random()
-    if health_roll <= DOG_HEALTHY_RATE:
+    if health_roll <= health_values["healthy_rate"]:
         health_status = DogHealthStatus.HEALTHY
-    elif health_roll <= DOG_HEALTHY_RATE + DOG_UNSPECIFIED_RATE:
+    elif health_roll <= health_values['healthy_rate'] + health_values["unspecified_rate"]:
         health_status = DogHealthStatus.UNSPECIFIED
-    elif health_roll <= DOG_HEALTHY_RATE + DOG_UNSPECIFIED_RATE + DOG_SICK_RATE:
+    elif health_roll <= health_values['healthy_rate'] + health_values["unspecified_rate"] + health_values["sick_rate"]:
         health_status = DogHealthStatus.SICK
-    else:
+    elif health_roll <= health_values['healthy_rate'] + health_values["unspecified_rate"] + health_values["sick_rate"] + health_values["passed_away_rate"]:
         health_status = DogHealthStatus.PASSED_AWAY
-        
+
+    vaccination_roll = random.random()
+    if vaccination_roll <= vaccination_values["complete_rate"]:
+        vaccination_status = DogVaccinationStatus.COMPLETE
+    elif vaccination_roll <= vaccination_values["complete_rate"] + vaccination_values["incomplete_rate"]:
+        vaccination_status = DogVaccinationStatus.INCOMPLETE
+    elif vaccination_roll <= vaccination_values["complete_rate"] + vaccination_values["incomplete_rate"] + vaccination_values["not_vaccinated_rate"]:
+        vaccination_status = DogVaccinationStatus.NOT_VACCINATED
+    else:
+        vaccination_status = DogVaccinationStatus.UNSPECIFIED
+
     
     if health_status == DogHealthStatus.HEALTHY:
         adoption_status = AdoptionStatus.FIT
@@ -462,19 +548,19 @@ def get_random_dog(charter):
 
     
 CHARTER_NAMES = [
-    'TEST KK_ISTANBUL',
-    'TEST KK_BANDIRMA',
-    'TEST KK_ANKARA',
-    'TEST KK_IZMIR',
-    'TEST KK_ANTALYA',
-    'TEST KK_BURSA',
-    'TEST KK_DENIZLI',
-    'TEST KK_KONYA',
-    'TEST KK_KAYSERI',
-    'TEST KK_MALATYA',
-    'TEST KK_SAMSUN',
-    'TEST KK_SINOP',
-    'TEST KK_TEKIRDAG',
+    'TEST KRES_ISTANBUL',
+    'TEST KRES_BANDIRMA',
+    'TEST KRES_ANKARA',
+    'TEST KRES_IZMIR',
+    'TEST KRES_ANTALYA',
+    'TEST KRES_BURSA',
+    'TEST KRES_DENIZLI',
+    'TEST KRES_KONYA',
+    'TEST KRES_KAYSERI',
+    'TEST KRES_MALATYA',
+    'TEST KRES_SAMSUN',
+    'TEST KRES_SINOP',
+    'TEST KRES_TEKIRDAG',
 ]
     
 def create_charters(count):

@@ -82,9 +82,9 @@ class EntityInfo(models.Model):
             raise ValidationError('Email or phone is required')
         if EntityInfo.objects.filter(name=self.name).exists():
             raise ValidationError(f'Name {self.name} already exists')
-        if EntityInfo.objects.filter(email=self.email).exists():
+        if self.email and EntityInfo.objects.filter(email=self.email).exists():
             raise ValidationError(f'Email {self.email} already exists')
-        if EntityInfo.objects.filter(phone=self.phone).exists():
+        if self.phone and EntityInfo.objects.filter(phone=self.phone).exists():
             raise ValidationError(f'Phone {self.phone} already exists')
     def __str__(self):
         return self.name
@@ -92,6 +92,7 @@ class EntityInfo(models.Model):
 
 class Charter(models.Model):
     entity_info = models.OneToOneField(EntityInfo, on_delete=models.PROTECT)
+
 
 
 class Contact(models.Model):

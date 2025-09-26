@@ -22,4 +22,11 @@ urlpatterns = [
     path('contact/create/', views.ContactCreateView.as_view(), name='contact_create'),
     path('contact/<int:pk>/edit/', views.ContactUpdateView.as_view(), name='contact_edit'),
     path('contact/<int:pk>/delete/', views.ContactDeleteView.as_view(), name='contact_delete'),
+
+    # Adoptee URLs
+    path('adoptees/', views.AdopteeListView.as_view(), name='adoptee_list'),  # Optional: list all adoptees
+    path('adoptee/<int:pk>/', views.AdopteeDetailView.as_view(), name='adoptee_detail'),
+    path('adoptee/create/', views.AdopteeCreateView.as_view(), name='adoptee_create'),
+    path('adoptee/<int:pk>/edit/', views.AdopteeUpdateView.as_view(), name='adoptee_edit'),
+    path('adoptee/<int:pk>/delete/', views.AdopteeDeleteView.as_view(), name='adoptee_delete'),
 ]

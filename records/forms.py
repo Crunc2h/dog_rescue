@@ -1,4 +1,5 @@
 from django import forms
+from django.core.exceptions import ValidationError
 from .models import Dog, Contact, Charter, Adoptee, EntityInfo, DogAdoptionRecord
 
 
@@ -127,7 +128,7 @@ class CharterForm(forms.ModelForm):
 
     class Meta:
         model = Charter
-        fields = ['entity_info']
+        fields = []
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -147,11 +148,32 @@ class CharterForm(forms.ModelForm):
             raise forms.ValidationError("A charter with this name already exists.")
         return name.strip().title()  # Clean and format the name
 
+    def clean(self):
+        cleaned_data = super().clean()
+        
+        # Create a temporary EntityInfo instance to validate
+        temp_entity = EntityInfo()
+        temp_entity.name = cleaned_data.get('name', '')
+        temp_entity.email = cleaned_data.get('email', '')
+        temp_entity.phone = cleaned_data.get('phone', '')
+        temp_entity.address = cleaned_data.get('address', '')
+        
+        # Call EntityInfo's clean method to validate
+        try:
+            temp_entity.clean()
+        except ValidationError as e:
+            # Add the validation error to the form's non_field_errors
+            # Extract the first error message cleanly
+            error_message = e.messages[0] if e.messages else str(e)
+            self.add_error(None, error_message)
+        
+        return cleaned_data
+
     def save(self, commit=True):
         charter = super().save(commit=False)
         
         # Create or update EntityInfo
-        if charter.entity_info:
+        if hasattr(charter, 'entity_info_id') and charter.entity_info_id:
             entity_info = charter.entity_info
         else:
             entity_info = EntityInfo()

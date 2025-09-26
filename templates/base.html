@@ -13,17 +13,27 @@
             --success-color: #10b981;
             --warning-color: #f59e0b;
             --danger-color: #ef4444;
-            --text-color: #1f2937;
+            --text-color: #1a1a1a;
             --text-light: #6b7280;
             --border-color: #e5e7eb;
             --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
             --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            --shadow-subtle: 0 4px 20px rgba(0, 0, 0, 0.1);
         }
 
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+        }
+
+        /* Reduced motion support */
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
         }
 
         body {
@@ -50,33 +60,152 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            gap: 2rem;
         }
 
         .logo {
             font-size: 1.5rem;
             font-weight: 700;
-            color: var(--primary-color);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
             text-decoration: none;
             display: flex;
             align-items: center;
             gap: 0.5rem;
+            white-space: nowrap;
+        }
+
+        .logo .dog-icon {
+            font-size: 1.8rem;
+            animation: bounce 2s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% {
+                transform: translateY(0);
+            }
+            40% {
+                transform: translateY(-10px);
+            }
+            60% {
+                transform: translateY(-5px);
+            }
         }
 
         .nav-links {
             display: flex;
             align-items: center;
+            justify-content: space-between;
+            width: 100%;
+        }
+
+        .nav-left {
+            display: flex;
+            align-items: center;
             gap: 2rem;
+        }
+
+        .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
         }
 
         .nav-link {
             color: var(--text-color);
             text-decoration: none;
             font-weight: 500;
-            transition: color 0.2s ease;
+            transition: all 0.3s ease;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            position: relative;
+            overflow: hidden;
+            will-change: transform, opacity;
+        }
+
+        .nav-link:focus {
+            outline: 2px solid #667eea;
+            outline-offset: 2px;
         }
 
         .nav-link:hover {
             color: var(--primary-color);
+            background-color: rgba(0, 0, 0, 0.1);
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+        }
+
+        .nav-link.gradient {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .nav-link.gradient:hover {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            background-color: rgba(0, 0, 0, 0.1);
+        }
+
+        .search-dropdown {
+            position: relative;
+            display: inline-block;
+        }
+
+        .search-dropdown-content {
+            display: none;
+            position: absolute;
+            background-color: white;
+            min-width: 160px;
+            box-shadow: var(--shadow-subtle);
+            z-index: 1;
+            border-radius: 8px;
+            overflow: hidden;
+            top: calc(100% + 8px);
+            left: 0;
+            opacity: 0;
+            transform: translateY(-10px);
+            transition: all 0.3s ease;
+            will-change: transform, opacity;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .search-dropdown-content.show {
+            display: block;
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .search-dropdown-content a {
+            color: var(--text-color);
+            padding: 12px 16px;
+            text-decoration: none;
+            display: block;
+            transition: all 0.2s ease;
+            will-change: transform, background-color;
+        }
+
+        .search-dropdown-content a:focus {
+            outline: 2px solid #667eea;
+            outline-offset: -2px;
+        }
+
+        .search-dropdown-content a:hover {
+            background-color: rgba(0, 0, 0, 0.1);
+            transform: translateX(4px);
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+        }
+
+        .search-dropdown-content a.gradient {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
 
         .container {
@@ -85,50 +214,168 @@
             padding: 2rem;
         }
 
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            background: var(--primary-color);
-            color: white;
+        /* Mobile responsiveness improvements */
+        @media (max-width: 768px) {
+            .navbar-content {
+                flex-direction: column;
+                gap: 1rem;
+                padding: 0 1rem;
+            }
+            
+            .nav-links {
+                flex-direction: column;
+                gap: 1rem;
+                width: 100%;
+            }
+            
+            .nav-left, .nav-right {
+                justify-content: center;
+            }
+            
+            .logo {
+                font-size: 1.2rem;
+                text-align: center;
+            }
+            
+        .container {
+            padding: 1rem;
+        }
+    }
+
+    /* Error handling and empty states */
+    .error-message {
+        background: #fef2f2;
+        border: 1px solid #fecaca;
+        color: #dc2626;
+        padding: 0.75rem;
+        border-radius: 0.5rem;
+        margin: 1rem 0;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 2rem;
+        color: #6b7280;
+        font-style: italic;
+    }
+
+    .loading-state {
+        opacity: 0.6;
+        pointer-events: none;
+        position: relative;
+    }
+
+    .loading-state::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 20px;
+        height: 20px;
+        margin: -10px 0 0 -10px;
+        border: 2px solid #667eea;
+        border-top: 2px solid transparent;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+
+        /* Permanent dark mode styles */
+        :root {
+            --secondary-color: #1a1a1a;
+            --text-color: #e5e5e5;
+            --text-light: #a0a0a0;
+            --border-color: #333;
+        }
+
+        body {
+            background-color: var(--secondary-color);
+            color: var(--text-color);
+        }
+
+        .navbar {
+            background: #2a2a2a;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .search-dropdown-content {
+            background-color: #2a2a2a;
+            border: 1px solid var(--border-color);
+        }
+
+        /* Permanent text color overrides for white text on gradients */
+        .charter-name,
+        .charter-chart-title,
+        .total-dogs-number,
+        .total-dogs-label,
+        .charter-distribution-label,
+        .chart-box .total-dogs-label,
+        .chart-box .charter-distribution-label,
+        .charter-legend-item,
+        .charter-legend-item .legend-label,
+        .charter-legend-item .legend-percentage,
+        .charter-legend-item .legend-count,
+        .legend-item,
+        .legend-item .legend-label,
+        .legend-item .legend-percentage,
+        .legend-item .legend-count {
+            color: #1a1a1a !important;
+        }
+
+        /* Force all text in chart boxes to be dark */
+        .chart-box * {
+            color: #1a1a1a !important;
+        }
+
+        /* Force total dogs chart text to be dark */
+        .total-dogs-box * {
+            color: #1a1a1a !important;
+        }
+
+
+
+        /* Keep section titles with original gradient */
+        .section-title {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+            -webkit-background-clip: text !important;
+            -webkit-text-fill-color: transparent !important;
+            background-clip: text !important;
+        }
+
+        /* DEFAULT BUTTON STYLING */
+        .btn, button, input[type="submit"] {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #2a2a2a;
             border: none;
             padding: 0.75rem 1.5rem;
             border-radius: 8px;
-            font-weight: 500;
+            font-weight: 600;
             font-size: 0.9rem;
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: all 0.3s ease;
             text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
         }
 
-        .btn:hover {
-            background: var(--primary-dark);
-            transform: translateY(-1px);
+        .btn:hover, button:hover, input[type="submit"]:hover {
+            background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
         }
 
-        .btn-secondary {
-            background: var(--text-light);
+        .btn:focus, button:focus, input[type="submit"]:focus {
+            outline: 2px solid #667eea;
+            outline-offset: 2px;
         }
 
-        .btn-secondary:hover {
-            background: #4b5563;
-        }
-
-        .btn-danger {
-            background: var(--danger-color);
-        }
-
-        .btn-danger:hover {
-            background: #dc2626;
-        }
-
-        .btn-success {
-            background: var(--success-color);
-        }
-
-        .btn-success:hover {
-            background: #059669;
-        }
 
         .card {
             background: white;
@@ -248,17 +495,25 @@
     <nav class="navbar">
         <div class="navbar-content">
             <a href="{% url 'main:dashboard' %}" class="logo">
-                🐕 Dog Rescue Management
+                <span class="dog-icon">🐕</span> Dog Rescue Management
             </a>
             <div class="nav-links">
-                <a href="{% url 'main:dashboard' %}" class="nav-link">Dashboard</a>
-                <a href="{% url 'records:dog_list' %}" class="nav-link">All Dogs</a>
-                <a href="{% url 'records:contact_list' %}" class="nav-link">All Contacts</a>
-                <span class="nav-link">Welcome, {{ user.username }}</span>
-                <form method="post" action="{% url 'main:logout' %}" style="display: inline;">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-secondary">Logout</button>
-                </form>
+                <div class="nav-left">
+                    <a href="{% url 'main:dashboard' %}" class="nav-link gradient">Dashboard</a>
+                    <div class="search-dropdown">
+                        <a href="#" class="nav-link gradient">🔍 Search</a>
+                        <div class="search-dropdown-content">
+                            <a href="{% url 'records:dog_list' %}" class="gradient">All Dogs</a>
+                            <a href="{% url 'records:contact_list' %}" class="gradient">All Contacts</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="nav-right">
+                    <form method="post" action="{% url 'main:logout' %}" style="display: inline;">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-secondary" id="logout-btn">Logout</button>
+                    </form>
+                </div>
             </div>
         </div>
     </nav>
@@ -279,5 +534,93 @@
     </main>
 
     {% block extra_js %}{% endblock %}
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const searchDropdown = document.querySelector('.search-dropdown');
+            const searchLink = searchDropdown.querySelector('.nav-link');
+            const dropdownContent = searchDropdown.querySelector('.search-dropdown-content');
+            let isOpen = false;
+            let closeTimeout;
+
+            function openDropdown() {
+                clearTimeout(closeTimeout);
+                dropdownContent.style.display = 'block';
+                // Force reflow to ensure display: block is applied
+                dropdownContent.offsetHeight;
+                dropdownContent.classList.add('show');
+                isOpen = true;
+            }
+
+            function closeDropdown() {
+                dropdownContent.classList.remove('show');
+                closeTimeout = setTimeout(() => {
+                    if (!isOpen) {
+                        dropdownContent.style.display = 'none';
+                    }
+                }, 300); // Match the CSS transition duration
+                isOpen = false;
+            }
+
+            // Open dropdown on mouse enter
+            searchDropdown.addEventListener('mouseenter', openDropdown);
+
+            // Close dropdown on mouse leave
+            searchDropdown.addEventListener('mouseleave', closeDropdown);
+
+            // Prevent dropdown from closing when hovering over it
+            dropdownContent.addEventListener('mouseenter', function() {
+                clearTimeout(closeTimeout);
+            });
+
+            // Close dropdown when clicking outside
+            document.addEventListener('click', function(event) {
+                if (!searchDropdown.contains(event.target)) {
+                    closeDropdown();
+                }
+            });
+
+            // Keyboard shortcuts
+            document.addEventListener('keydown', function(event) {
+                // Ctrl+K or Cmd+K for search
+                if ((event.ctrlKey || event.metaKey) && event.key === 'k') {
+                    event.preventDefault();
+                    openDropdown();
+                    searchLink.focus();
+                }
+                
+                // Escape to close dropdown
+                if (event.key === 'Escape' && isOpen) {
+                    closeDropdown();
+                }
+            });
+        });
+
+        // Loading state utility functions
+        function showLoadingState(element) {
+            element.classList.add('loading-state');
+        }
+
+        function hideLoadingState(element) {
+            element.classList.remove('loading-state');
+        }
+
+        // Micro-interactions for charter cards
+        document.addEventListener('DOMContentLoaded', function() {
+            const charterCards = document.querySelectorAll('.charter-card');
+            charterCards.forEach(card => {
+                card.addEventListener('mouseenter', function() {
+                    this.style.transform = 'translateY(-2px)';
+                });
+                
+                card.addEventListener('mouseleave', function() {
+                    this.style.transform = 'translateY(0)';
+                });
+            });
+
+            // Page is now permanently in dark mode - no toggle needed
+        });
+
+    </script>
 </body>
 </html>

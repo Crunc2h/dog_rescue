@@ -20,7 +20,7 @@ class DogAdmin(admin.ModelAdmin):
             'fields': ('health_status', 'vaccination_status', 'castration_status', 'health_record', 'vaccination_record', 'treatment_record')
         }),
         ('Adoption Information', {
-            'fields': ('eligible_for_adoption', 'adoption_status', 'owner', 'charter')
+            'fields': ('adoption_status', 'owner', 'charter')
         }),
         ('Other Information', {
             'fields': ('special_needs', 'behavioral_notes', 'other_notes', 'passing_date', 'passing_reason', 'burial_place')
@@ -50,13 +50,16 @@ class DogAdmin(admin.ModelAdmin):
 
 @admin.register(Contact)
 class ContactAdmin(admin.ModelAdmin):
-    list_display = ['get_name', 'created']
+    list_display = ['get_name', 'get_created']
     search_fields = ['entity_info__name', 'entity_info__phone', 'entity_info__email']
-    readonly_fields = ['modified']
     
     def get_name(self, obj):
         return obj.entity_info.name if obj.entity_info else '-'
     get_name.short_description = 'Name'
+    
+    def get_created(self, obj):
+        return obj.entity_info.created if obj.entity_info else '-'
+    get_created.short_description = 'Created'
 
 @admin.register(Charter)
 class CharterAdmin(admin.ModelAdmin):
@@ -69,13 +72,16 @@ class CharterAdmin(admin.ModelAdmin):
 
 @admin.register(Adoptee)
 class AdopteeAdmin(admin.ModelAdmin):
-    list_display = ['get_name', 'adoption_status', 'created']
+    list_display = ['get_name', 'adoption_status', 'get_created']
     search_fields = ['entity_info__name', 'entity_info__phone', 'entity_info__email']
-    readonly_fields = ['modified']
     
     def get_name(self, obj):
         return obj.entity_info.name if obj.entity_info else '-'
     get_name.short_description = 'Name'
+    
+    def get_created(self, obj):
+        return obj.entity_info.created if obj.entity_info else '-'
+    get_created.short_description = 'Created'
 
 @admin.register(EntityInfo)
 class EntityInfoAdmin(admin.ModelAdmin):

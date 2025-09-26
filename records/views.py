@@ -6,8 +6,8 @@ from django.views.generic import (
     DetailView, CreateView, UpdateView, DeleteView,
     ListView
 )
-from .models import Dog, Contact, Charter
-from .forms import DogForm, ContactForm, CharterForm
+from .models import Dog, Contact, Charter, Adoptee, AdoptionStatus, DogHealthStatus
+from .forms import DogForm, ContactForm, CharterForm, AdopteeForm
 # Create your views here.
 # =============================================================================
 # CHARTER VIEWS
@@ -25,17 +25,23 @@ class CharterDetailView(LoginRequiredMixin, DetailView):
 
         # Get related objects
         dogs = charter.dogs.select_related('owner').all()
-        contacts = Contact.objects.filter(charter=charter)
+        adoptees = Adoptee.objects.filter(charter=charter)
 
         # Charter statistics
         context.update({
             'dogs': dogs,
-            'contacts': contacts,
+            'adoptees': adoptees,
             'charter_stats': {
                 'total_dogs': dogs.count(),
-                'adopted_dogs': dogs.filter(adoption_status='ADOPTED').count(),
-                'available_dogs': dogs.filter(eligible_for_adoption=True, adoption_status='I').count(),
-                'healthy_dogs': dogs.filter(health_status='HEALTHY').count(),
+                'adopted_dogs': dogs.filter(adoption_status=AdoptionStatus.ADOPTED).count(),
+                'fit_dogs': dogs.filter(adoption_status=AdoptionStatus.FIT).count(),
+                'unfit_dogs': dogs.filter(adoption_status=AdoptionStatus.UNFIT).count(),
+                'trial_dogs': dogs.filter(adoption_status=AdoptionStatus.TRIAL).count(),
+                'unspecified_dogs': dogs.filter(adoption_status=AdoptionStatus.UNSPECIFIED).count(),
+                'healthy_dogs': dogs.filter(health_status=DogHealthStatus.HEALTHY).count(),
+                'sick_dogs': dogs.filter(health_status=DogHealthStatus.SICK).count(),
+                'passed_away_dogs': dogs.filter(health_status=DogHealthStatus.PASSED_AWAY).count(),
+                'unspecified_health_dogs': dogs.filter(health_status=DogHealthStatus.UNSPECIFIED).count(),
             }
         })
         return context
@@ -50,7 +56,8 @@ class CharterCreateView(LoginRequiredMixin, CreateView):
         return reverse_lazy('records:charter_detail', kwargs={'pk': self.object.pk})
 
     def form_valid(self, form):
-        messages.success(self.request, f'Charter "{form.instance.entity_info.name}" created successfully!')
+        charter_name = form.cleaned_data['name']
+        messages.success(self.request, f'Charter "{charter_name}" created successfully!')
         return super().form_valid(form)
 
 
@@ -83,12 +90,12 @@ class CharterDeleteView(LoginRequiredMixin, DeleteView):
     def delete(self, request, *args, **kwargs):
         charter = self.get_object()
         
-        # Check if charter has associated dogs or contacts
+        # Check if charter has associated dogs or adoptees
         dogs_count = charter.dogs.count()
-        contacts_count = charter.contact_set.count()
+        adoptees_count = charter.adoptee_set.count()
         
-        if dogs_count > 0 or contacts_count > 0:
-            error_msg = f"Charter cannot be deleted because there are {dogs_count} dog{'s' if dogs_count != 1 else ''} and {contacts_count} contact{'s' if contacts_count != 1 else ''} associated with it."
+        if dogs_count > 0 or adoptees_count > 0:
+            error_msg = f"Charter cannot be deleted because there are {dogs_count} dog{'s' if dogs_count != 1 else ''} and {adoptees_count} adoptee{'s' if adoptees_count != 1 else ''} associated with it."
             messages.error(request, error_msg)
             return redirect('records:charter_detail', pk=charter.pk)
         
@@ -190,6 +197,12 @@ class DogListView(LoginRequiredMixin, ListView):
         charter_id = self.request.GET.get('charter')
         if charter_id:
             queryset = queryset.filter(charter_id=charter_id)
+        
+        # Filter by adoption status
+        status = self.request.GET.get('status')
+        if status:
+            queryset = queryset.filter(adoption_status=status)
+        
         return queryset.order_by('-created')
 
     def get_context_data(self, **kwargs):
@@ -290,11 +303,93 @@ class ContactListView(LoginRequiredMixin, ListView):
     def get_queryset(self):
         queryset = Contact.objects.select_related('entity_info').all()
         # Note: Contact doesn't have charter field anymore
-        return queryset.order_by('-created')
+        return queryset.order_by('-entity_info__created')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['page_title'] = 'All Contacts'
+        return context
+
+
+# =============================================================================
+# ADOPTEE VIEWS (Class-based - CRUD operations)
+# =============================================================================
+
+class AdopteeDetailView(LoginRequiredMixin, DetailView):
+    model = Adoptee
+    template_name = 'records/adoptee_detail.html'
+    context_object_name = 'adoptee'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        adoptee = self.object
+        
+        # Get related adoption records
+        adoption_records = adoptee.adoptions.select_related('dog', 'charter').all()
+        
+        context.update({
+            'adoption_records': adoption_records,
+            'page_title': f'Adoptee: {adoptee.entity_info.name}'
+        })
+        return context
+
+
+class AdopteeCreateView(LoginRequiredMixin, CreateView):
+    model = Adoptee
+    form_class = AdopteeForm
+    template_name = 'records/adoptee_form.html'
+
+    def get_success_url(self):
+        return reverse_lazy('records:adoptee_detail', kwargs={'pk': self.object.pk})
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['page_title'] = 'Add New Adoptee'
+        return context
+
+
+class AdopteeUpdateView(LoginRequiredMixin, UpdateView):
+    model = Adoptee
+    form_class = AdopteeForm
+    template_name = 'records/adoptee_form.html'
+
+    def get_success_url(self):
+        return reverse_lazy('records:adoptee_detail', kwargs={'pk': self.object.pk})
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['page_title'] = f'Edit Adoptee: {self.object.entity_info.name}'
+        return context
+
+
+class AdopteeDeleteView(LoginRequiredMixin, DeleteView):
+    model = Adoptee
+    template_name = 'records/confirm_delete.html'
+    success_url = reverse_lazy('records:adoptee_list')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['page_title'] = f'Delete Adoptee: {self.object.entity_info.name}'
+        context['object_name'] = 'adoptee'
+        return context
+
+
+class AdopteeListView(LoginRequiredMixin, ListView):
+    model = Adoptee
+    template_name = 'records/adoptee_list.html'
+    context_object_name = 'adoptees'
+    paginate_by = 20  # Pagination for large lists
+
+    def get_queryset(self):
+        queryset = Adoptee.objects.select_related('entity_info', 'charter').all()
+        charter_id = self.request.GET.get('charter')
+        if charter_id:
+            queryset = queryset.filter(charter_id=charter_id)
+        return queryset.order_by('-entity_info__created')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['page_title'] = 'All Adoptees'
         return context
 
 

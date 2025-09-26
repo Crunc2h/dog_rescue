@@ -94,6 +94,7 @@ class Command(BaseCommand):
         
 
         self.stdout.write(self.style.WARNING("\n🏢 Step 2: Populating charters..."))
+        dogs_per_charter = random.randint(dogs_min, dogs_max)
         for i, charter in enumerate(charters):
             self.stdout.write(self.style.WARNING(f"\n👥 Step 2-{i+1}-1: Creating contacts for {charter.entity_info.name}..."))
             total_contacts = random.randint(contacts_min, contacts_max)
@@ -102,9 +103,10 @@ class Command(BaseCommand):
             self.stdout.write(self.style.WARNING(f"\n👥 Step 2-{i+1}-2: Creating adoptees for {charter.entity_info.name}..."))
             total_adoptees = random.randint(adoptees_min, adoptees_max)
             create_contacts_or_adoptees_for_charter(charter, total_adoptees, create_adoptees=True)
-            
+            dogs_max_per_charter = round(dogs_per_charter * 1.1)
+            dogs_min_per_charter = round(dogs_per_charter * 0.9)
             self.stdout.write(self.style.WARNING(f"\n🐕 Step 2-{i+1}-3: Creating dogs for {charter.entity_info.name}..."))
-            healthy, sick, passed, unspecified = create_dogs(dogs_min, dogs_max, charter)
+            healthy, sick, passed, unspecified = create_dogs(dogs_min_per_charter, dogs_max_per_charter, charter)
             if healthy == 0 and sick == 0 and passed == 0 and unspecified == 0:
                 self.stdout.write(self.style.ERROR("No dogs created. Something went wrong."))
                 return

@@ -114,7 +114,7 @@
         font-weight: 500;
     }
 
-    .status-available {
+    .status-fit {
         background: #ecfdf5;
         color: #065f46;
     }
@@ -122,6 +122,21 @@
     .status-adopted {
         background: #dbeafe;
         color: #1e40af;
+    }
+
+    .status-trial {
+        background: #fef3c7;
+        color: #92400e;
+    }
+
+    .status-unfit {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    .status-unspecified {
+        background: #f3f4f6;
+        color: #374151;
     }
 
     .dog-details {
@@ -180,11 +195,6 @@
         margin-bottom: 1rem;
     }
 
-    .action-buttons {
-        display: flex;
-        gap: 1rem;
-        margin-top: 1.5rem;
-    }
 
     /* Compact Lists */
     .compact-dogs-list, .compact-contacts-list {
@@ -266,12 +276,36 @@
             <div class="stat-label">Adopted</div>
         </div>
         <div class="stat-item">
-            <div class="stat-number">{{ charter_stats.available_dogs }}</div>
-            <div class="stat-label">Available</div>
+            <div class="stat-number">{{ charter_stats.fit_dogs }}</div>
+            <div class="stat-label">Fit</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-number">{{ charter_stats.trial_dogs }}</div>
+            <div class="stat-label">Trial</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-number">{{ charter_stats.unfit_dogs }}</div>
+            <div class="stat-label">Unfit</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-number">{{ charter_stats.unspecified_dogs }}</div>
+            <div class="stat-label">Unspecified</div>
         </div>
         <div class="stat-item">
             <div class="stat-number">{{ charter_stats.healthy_dogs }}</div>
             <div class="stat-label">Healthy</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-number">{{ charter_stats.sick_dogs }}</div>
+            <div class="stat-label">Sick</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-number">{{ charter_stats.passed_away_dogs }}</div>
+            <div class="stat-label">Passed Away</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-number">{{ charter_stats.unspecified_health_dogs }}</div>
+            <div class="stat-label">Health Unspecified</div>
         </div>
     </div>
 </div>
@@ -291,8 +325,8 @@
                 <div class="dog-name">{{ dog.name }}</div>
                 <div class="dog-meta">{{ dog.age_months }}mo • {{ dog.get_breed_display }} • {{ dog.get_gender_display }}</div>
             </div>
-            <div class="dog-status {% if dog.is_adopted %}status-adopted{% else %}status-available{% endif %}">
-                {% if dog.is_adopted %}Adopted{% else %}Available{% endif %}
+            <div class="dog-status status-{{ dog.adoption_status|lower }}">
+                {{ dog.get_adoption_status_display }}
             </div>
         </div>
         {% endfor %}
@@ -315,32 +349,32 @@
 <!-- Contacts Section -->
 <div class="section">
     <div class="section-header">
-        <h2 class="section-title">Contacts ({{ contacts.count }})</h2>
-        <a href="{% url 'records:contact_create' %}?charter={{ charter.pk }}" class="btn">+ Add Contact</a>
+        <h2 class="section-title">Adoptees ({{ adoptees.count }})</h2>
+        <a href="{% url 'records:adoptee_create' %}?charter={{ charter.pk }}" class="btn">+ Add Adoptee</a>
     </div>
 
-    {% if contacts %}
+    {% if adoptees %}
     <div class="compact-contacts-list">
-        {% for contact in contacts|slice:"0:3" %}
-        <div class="compact-contact-item" onclick="window.location.href='{% url 'records:contact_detail' contact.pk %}'">
+        {% for adoptee in adoptees|slice:"0:3" %}
+        <div class="compact-contact-item" onclick="window.location.href='{% url 'records:adoptee_detail' adoptee.pk %}'">
             <div class="contact-info">
-                <div class="contact-name">{{ contact.entity_info.name }}</div>
-                <div class="contact-meta">{{ contact.entity_info.email }} • {{ contact.entity_info.phone }}</div>
+                <div class="contact-name">{{ adoptee.entity_info.name }}</div>
+                <div class="contact-meta">{{ adoptee.entity_info.email }} • {{ adoptee.entity_info.phone }}</div>
             </div>
         </div>
         {% endfor %}
-        {% if contacts.count > 3 %}
+        {% if adoptees.count > 3 %}
         <div class="view-more-contacts">
-            <a href="{% url 'records:contact_list' %}?charter={{ charter.pk }}" class="btn btn-secondary">View {{ contacts.count|add:"-3" }} more contacts</a>
+            <a href="{% url 'records:adoptee_list' %}?charter={{ charter.pk }}" class="btn btn-secondary">View {{ adoptees.count|add:"-3" }} more adoptees</a>
         </div>
         {% endif %}
     </div>
     {% else %}
     <div class="empty-state">
         <div class="empty-state-icon">👤</div>
-        <h3>No contacts yet</h3>
-        <p>Add contacts for this charter to manage adoptions and communications.</p>
-        <a href="{% url 'records:contact_create' %}?charter={{ charter.pk }}" class="btn" style="margin-top: 1rem;">+ Add Contact</a>
+        <h3>No adoptees yet</h3>
+        <p>Add adoptees for this charter to manage adoptions and communications.</p>
+        <a href="{% url 'records:adoptee_create' %}?charter={{ charter.pk }}" class="btn" style="margin-top: 1rem;">+ Add Adoptee</a>
     </div>
     {% endif %}
 </div>

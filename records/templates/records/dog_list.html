@@ -74,7 +74,7 @@
         font-weight: 500;
     }
 
-    .status-available {
+    .status-fit {
         background: #ecfdf5;
         color: #065f46;
     }
@@ -82,6 +82,21 @@
     .status-adopted {
         background: #dbeafe;
         color: #1e40af;
+    }
+
+    .status-trial {
+        background: #fef3c7;
+        color: #92400e;
+    }
+
+    .status-unfit {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    .status-unspecified {
+        background: #f3f4f6;
+        color: #374151;
     }
 
     .dog-details {
@@ -226,8 +241,11 @@
             <label class="filter-label">Status</label>
             <select name="status" class="filter-select">
                 <option value="">All statuses</option>
-                <option value="available" {% if request.GET.status == "available" %}selected{% endif %}>Available</option>
-                <option value="adopted" {% if request.GET.status == "adopted" %}selected{% endif %}>Adopted</option>
+                <option value="F" {% if request.GET.status == "F" %}selected{% endif %}>Fit</option>
+                <option value="A" {% if request.GET.status == "A" %}selected{% endif %}>Adopted</option>
+                <option value="T" {% if request.GET.status == "T" %}selected{% endif %}>Trial</option>
+                <option value="U" {% if request.GET.status == "U" %}selected{% endif %}>Unfit</option>
+                <option value="NA" {% if request.GET.status == "NA" %}selected{% endif %}>Unspecified</option>
             </select>
         </div>
         <div class="filter-group">
@@ -243,7 +261,7 @@
     <div class="dog-card" onclick="window.location.href='{% url 'records:dog_detail' dog.pk %}'">
         <div class="dog-header">
             <div class="dog-name">{{ dog.name }}</div>
-            <div class="dog-status {% if dog.adoption_status == 'ADOPTED' %}status-adopted{% else %}status-available{% endif %}">
+            <div class="dog-status status-{{ dog.adoption_status|lower }}">
                 {{ dog.get_adoption_status_display }}
             </div>
         </div>
