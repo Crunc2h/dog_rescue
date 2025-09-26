@@ -49,18 +49,19 @@ class Command(BaseCommand):
 
         for charter in charters:
             self.stdout.write(f'Generating {count_min}-{count_max} test dogs...')
-            healthy, sick, passed = create_dogs(count_min, count_max, charter)
+            healthy, sick, passed, unspecified = create_dogs(count_min, count_max, charter)
 
-            if healthy == 0 and sick == 0 and passed == 0:
+            if healthy == 0 and sick == 0 and passed == 0 and unspecified == 0:
                 self.stdout.write(self.style.ERROR("No dogs created. Something went wrong."))
                 return
 
-            self.stdout.write(f'Successfully created {healthy + sick + passed} test dogs!')
+            self.stdout.write(f'Successfully created {healthy + sick + passed + unspecified} test dogs!')
             self.stdout.write(f'Statistics:')
             self.stdout.write(f'  - Charter: {charter.entity_info.name}')
             self.stdout.write(f'  - Healthy: {healthy}')
             self.stdout.write(f'  - Sick: {sick}')
             self.stdout.write(f'  - Passed Away: {passed}')
+            self.stdout.write(f'  - Unspecified: {unspecified}')
 
         self.stdout.write(
             self.style.SUCCESS(

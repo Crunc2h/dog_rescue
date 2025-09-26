@@ -104,8 +104,8 @@ class Command(BaseCommand):
             create_contacts_or_adoptees_for_charter(charter, total_adoptees, create_adoptees=True)
             
             self.stdout.write(self.style.WARNING(f"\n🐕 Step 2-{i+1}-3: Creating dogs for {charter.entity_info.name}..."))
-            healthy, sick, passed = create_dogs(dogs_min, dogs_max, charter)
-            if healthy == 0 and sick == 0 and passed == 0:
+            healthy, sick, passed, unspecified = create_dogs(dogs_min, dogs_max, charter)
+            if healthy == 0 and sick == 0 and passed == 0 and unspecified == 0:
                 self.stdout.write(self.style.ERROR("No dogs created. Something went wrong."))
                 return
             
@@ -152,28 +152,24 @@ class Command(BaseCommand):
         
         owned_dogs = Dog.objects.filter(owner__isnull=False).count()
         adopted_dogs = Dog.objects.filter(adoption_status=AdoptionStatus.ADOPTED).count()
-        available_dogs = Dog.objects.filter(adoption_status=AdoptionStatus.IDLE).count()
-        not_available_dogs = Dog.objects.filter(adoption_status=AdoptionStatus.NOT_AVAILABLE).count()
+        fit_dogs = Dog.objects.filter(adoption_status=AdoptionStatus.FIT).count()
+        unfit_dogs = Dog.objects.filter(adoption_status=AdoptionStatus.UNFIT).count()
+        unspecified_dogs = Dog.objects.filter(adoption_status=AdoptionStatus.UNSPECIFIED).count()
         trial_dogs = Dog.objects.filter(adoption_status=AdoptionStatus.TRIAL).count()
 
         owners_adoptees = Adoptee.objects.filter(adopted_dogs__isnull=False).count()
         trial_adoptees = Adoptee.objects.filter(adoption_status=AdoptionStatus.TRIAL).count()
-        idle_adoptees = Adoptee.objects.filter(adoption_status=AdoptionStatus.IDLE).count()
+        fit_adoptees = Adoptee.objects.filter(adoption_status=AdoptionStatus.FIT).count()
+        unfit_adoptees = Adoptee.objects.filter(adoption_status=AdoptionStatus.UNFIT).count()
+        unspecified_adoptees = Adoptee.objects.filter(adoption_status=AdoptionStatus.UNSPECIFIED).count()
         adoptee_adoptation_status_sanity = (
-        Adoptee.objects.filter(adoption_status=AdoptionStatus.NOT_AVAILABLE).count()
-        + Adoptee.objects.filter(adoption_status=AdoptionStatus.ADOPTED).count()
-        )
-        
-        eligibility_sanity = (
-        Dog.objects.filter(eligible_for_adoption=True, adoption_status=AdoptionStatus.TRIAL).count() 
-        + Dog.objects.filter(eligible_for_adoption=True, adoption_status=AdoptionStatus.NOT_AVAILABLE).count()
-        + Dog.objects.filter(eligible_for_adoption=True, adoption_status=AdoptionStatus.ADOPTED).count()
-        + Dog.objects.filter(eligible_for_adoption=False, adoption_status=AdoptionStatus.IDLE).count()
+        Adoptee.objects.filter(adoption_status=AdoptionStatus.ADOPTED).count()
         )
         
         healthy_dogs = Dog.objects.filter(health_status=DogHealthStatus.HEALTHY).count()
         sick_dogs = Dog.objects.filter(health_status=DogHealthStatus.SICK).count()
         passed_away_dogs = Dog.objects.filter(health_status=DogHealthStatus.PASSED_AWAY).count()
+        unspecified_dogs = Dog.objects.filter(health_status=DogHealthStatus.UNSPECIFIED).count()
         
         successful_adoptions = DogAdoptionRecord.objects.filter(result=AdoptionResult.APPROVED).count()
         rejected_adoptions = DogAdoptionRecord.objects.filter(result=AdoptionResult.REJECTED).count()
@@ -195,20 +191,23 @@ class Command(BaseCommand):
         self.stdout.write("🐕 DOG STATISTICS - ADOPTION STATUS:")
         self.stdout.write(f"   - Adopted: {adopted_dogs}")
         self.stdout.write(f"   - Owned (!!! SHOULD BE EQUAL TO ADOPTED DOGS !!!): {owned_dogs}")
-        self.stdout.write(f"   - Available: {available_dogs}")
-        self.stdout.write(f"   - Not Available: {not_available_dogs}")
+        self.stdout.write(f"   - Fit (Available for adoption): {fit_dogs}")
+        self.stdout.write(f"   - Unfit (Not ready for adoption): {unfit_dogs}")
+        self.stdout.write(f"   - Unspecified: {unspecified_dogs}")
         self.stdout.write(f"   - Trial: {trial_dogs}")
-        self.stdout.write(f"   - Eligibility Sanity Check (!!! SHOULD BE 0 !!!): {eligibility_sanity}")
         self.stdout.write("")
         self.stdout.write("🐕 DOG STATISTICS - HEALTH STATE:")
         self.stdout.write(f"   - Healthy: {healthy_dogs}")
         self.stdout.write(f"   - Sick: {sick_dogs}")
         self.stdout.write(f"   - Passed Away: {passed_away_dogs}")
+        self.stdout.write(f"   - Unspecified: {unspecified_dogs}")
         self.stdout.write("")
         self.stdout.write("💕 ADOPTEE STATISTICS:")
         self.stdout.write(f"   - Owners: {owners_adoptees}")
         self.stdout.write(f"   - Trial: {trial_adoptees}")
-        self.stdout.write(f"   - Idle: {idle_adoptees}")
+        self.stdout.write(f"   - Fit (Available for adoption): {fit_adoptees}")
+        self.stdout.write(f"   - Unfit (Not ready for adoption): {unfit_adoptees}")
+        self.stdout.write(f"   - Unspecified: {unspecified_adoptees}")
         self.stdout.write(f"   - Adoption Status Sanity Check (!!! SHOULD BE 0 !!!): {adoptee_adoptation_status_sanity}")
         self.stdout.write("")
         self.stdout.write("💕 ADOPTION RECORDS STATISTICS:")

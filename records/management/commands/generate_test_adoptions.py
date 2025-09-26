@@ -34,7 +34,7 @@ class Command(BaseCommand):
             self.stdout.write(self.style.ERROR("No adoptee found. Please create adoptees first."))
             return
         
-        available_dogs = Dog.objects.filter(eligible_for_adoption=True, adoption_status=AdoptionStatus.IDLE)
+        available_dogs = Dog.objects.filter(adoption_status=AdoptionStatus.FIT)
         if not available_dogs.exists():
             self.stdout.write(self.style.ERROR("No available dogs found. Please create dogs first."))
             return

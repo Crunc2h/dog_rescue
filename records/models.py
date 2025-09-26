@@ -48,17 +48,18 @@ class DogHealthStatus(models.TextChoices):
     HEALTHY = 'H', 'Healthy'
     SICK = 'S', 'Sick'
     PASSED_AWAY = 'P', 'Passed Away'
+    UNSPECIFIED = 'U', 'Unspecified'
 class DogVaccinationStatus(models.TextChoices):
     NOT_VACCINATED = 'N', 'Not Vaccinated'
     INCOMPLETE = 'I', 'Incomplete'
     COMPLETE = 'C', 'Complete'
     UNSPECIFIED = 'U', 'Unspecified'
-
 class AdoptionStatus(models.TextChoices):
-    IDLE = 'I', 'Idle'
+    FIT = 'F', 'Fit'
+    UNFIT = 'U', 'Unfit'
     TRIAL = 'T', 'Trial'
     ADOPTED = 'A', 'Adopted'
-    NOT_AVAILABLE = 'N', 'Not Available'
+    UNSPECIFIED = 'NA', 'Unspecified'
 class AdoptionResult(models.TextChoices):
     APPROVED = 'A', 'Approved'
     REJECTED = 'R', 'Rejected'
@@ -111,7 +112,14 @@ class Contact(models.Model):
 
 class Adoptee(Contact):
     charter = models.ForeignKey(Charter, on_delete=models.PROTECT)
-    adoption_status = models.CharField(choices=AdoptionStatus.choices, max_length=32, default=AdoptionStatus.IDLE)
+    adoption_status = models.CharField(choices=AdoptionStatus.choices, max_length=32, default=AdoptionStatus.FIT)
+
+    def clean(self):
+        if self.adoption_status == AdoptionStatus.ADOPTED or self.adoption_status == AdoptionStatus.UNSPECIFIED:
+            # Adoptee should never have ADOPTED or UNSPECIFIED status!!!
+            # If a dog is successfully adopted, the adoptee should have FIT status
+            # If they cannot adopt they should have UNFIT status
+            raise ValidationError(f'Invalid adoption status for adoptee - {self.adoption_status}')
 
 
 class Dog(models.Model):
@@ -137,9 +145,8 @@ class Dog(models.Model):
     charter = models.ForeignKey(Charter, on_delete=models.PROTECT, related_name='dogs')
 
     #Adoption
-    eligible_for_adoption = models.BooleanField(default=False)
     owner = models.ForeignKey(Adoptee, on_delete=models.PROTECT, related_name='adopted_dogs', blank=True, null=True)
-    adoption_status = models.CharField(choices=AdoptionStatus.choices, max_length=32, default=AdoptionStatus.NOT_AVAILABLE)
+    adoption_status = models.CharField(choices=AdoptionStatus.choices, max_length=32, default=AdoptionStatus.UNSPECIFIED)
 
     #Physical Description
     current_weight_kg = models.FloatField(blank=True, null=True)
@@ -151,7 +158,7 @@ class Dog(models.Model):
     default_photo = models.ImageField(upload_to=PHOTOS, blank=True, null=True, help_text="Default photo for this dog")
 
     # Health Info
-    health_status = models.CharField(choices=DogHealthStatus.choices, max_length=32, default=DogHealthStatus.HEALTHY)
+    health_status = models.CharField(choices=DogHealthStatus.choices, max_length=32, default=DogHealthStatus.UNSPECIFIED)
     vaccination_status = models.CharField(choices=DogVaccinationStatus.choices, max_length=32, default=DogVaccinationStatus.UNSPECIFIED)
     castration_status = models.CharField(choices=TripleChoice.choices, max_length=32, default=TripleChoice.UNSPECIFIED)
 
@@ -185,7 +192,6 @@ class Dog(models.Model):
         if self.default_photo:
             return self.default_photo
         
-        # Return a static default photo path
         return '/static/images/default-dog.png'
     
     def save(self, *args, **kwargs):
@@ -195,18 +201,12 @@ class Dog(models.Model):
             self.created = timezone.now()
         self.modified = timezone.now()
 
-        
-        # Adoption status and eligibility for adoption are only updated from the DogAdoptionRecord models update method
-        # This is only overridden in case of dog passing away
-        if self.health_status == DogHealthStatus.PASSED_AWAY and self.adoptions.filter(is_active=True).count() != 0:
-            self.eligible_for_adoption = False
-            self.adoption_status = AdoptionStatus.NOT_AVAILABLE
+        # Update the adoption status of the dog based on the adoption records
+        if self.adoptions.filter(is_active=True).count() != 0:
             for adoption_record in self.adoptions.all():
-                adoption_record.force_close_record()
-
+                adoption_record.save()
         super().save(*args, **kwargs)
         
-
         if is_new and self.current_weight_kg:
             self.weight_history.create(weight_kg=self.current_weight_kg)
 
@@ -217,6 +217,16 @@ class Dog(models.Model):
             raise ValidationError('Microchip ID already exists')
         if self.intake_reason == DogIntakeReasons.TRAINING and not self.owner:
             raise ValidationError('Owner is required if the dog is being trained')
+        if (
+            (self.health_status == DogHealthStatus.UNSPECIFIED and self.health_status == DogHealthStatus.PASSED_AWAY)
+            and self.adoption_status != AdoptionStatus.UNFIT
+            
+        ):
+            raise ValidationError(f'Health status and adoption status mismatch {self.health_status} - {self.adoption_status}')
+        
+        if self.adoption_status == AdoptionStatus.ADOPTED and not self.owner:
+            raise ValidationError('Dog is adopted but has no owner')
+
         if self.health_status == DogHealthStatus.PASSED_AWAY:
             if not self.passing_date:
                 raise ValidationError('Passing date is required if the dog is passed away')
@@ -224,18 +234,15 @@ class Dog(models.Model):
                 raise ValidationError('Passing reason is required if the dog is passed away')
             if not self.burial_place:
                 raise ValidationError('Burial place is required if the dog is passed away')
-
-        if self.eligible_for_adoption and self.adoption_status == AdoptionStatus.NOT_AVAILABLE:
-            raise ValidationError('Dog is eligible for adoption but is not available for adoption')
-        elif not self.eligible_for_adoption and self.adoption_status == AdoptionStatus.IDLE:
-            raise ValidationError('Dog is not eligible for adoption but is available for adoption')
-        if self.health_status == DogHealthStatus.PASSED_AWAY and (self.adoption_status != AdoptionStatus.NOT_AVAILABLE or self.eligible_for_adoption):
-            raise ValidationError('Dog is passed away but is available or eligible for adoption')
         
+        """
+        # Check for duplicate dog names within the same charter.
+        # Only allow duplicate names if the other dog with the same name has passed away.
         matching_dogs = self.charter.dogs.filter(name=self.name)
         for match in matching_dogs:
             if match.id != self.id and match.health_status != DogHealthStatus.PASSED_AWAY:
                 raise ValidationError('Dog with this name already exists')
+        """
         
 
 
@@ -312,50 +319,96 @@ class DogAdoptionRecord(models.Model):
             self.created = timezone.now()
         self.modified = timezone.now()
 
+
         if self.is_active:
-            if not self.dog.eligible_for_adoption or self.dog.adoption_status == AdoptionStatus.NOT_AVAILABLE:
-                raise ValidationError('Dog is not eligible for adoption')
-            for adoption in self.dog.adoptions.all():
-                if adoption.id != self.id and adoption.is_active:
-                    raise ValidationError('Dog already has an active adoption process')
-            self.update()
+            self.update_adoptation_status()
+        if self.is_active and self.dog.health_status == DogHealthStatus.PASSED_AWAY:
+            self.force_close_record()
+
+
         super().save(*args, **kwargs)
 
-    def update(self):
+    def clean(self):
+        
+        if self.is_active:
+            for adoption in self.dog.adoptions.all():
+                if adoption.id != self.id:
+                    if adoption.is_active:
+                        raise ValidationError('Dog already has an active adoption process')
+                    if adoption.result == AdoptionResult.APPROVED:
+                        raise ValidationError('Dog already has an approved adoption process')
+            
+            if self.dog.health_status == DogHealthStatus.PASSED_AWAY:
+                raise ValidationError('Dog is passed away and cannot be adopted')
+            if self.dog.health_status == DogHealthStatus.UNSPECIFIED:
+                raise ValidationError('Dog health status needs to be specified before adoption process')
+             
+            if (
+            self.dog.adoption_status == AdoptionStatus.UNFIT 
+            or self.dog.adoption_status == AdoptionStatus.UNSPECIFIED
+            or self.dog.adoption_status == AdoptionStatus.ADOPTED
+            ):
+                raise ValidationError('Dog is not eligible for adoption')
+            
+            if (
+                self.adoptee.adoption_status == AdoptionStatus.UNFIT
+                or self.adoptee.adoption_status == AdoptionStatus.UNSPECIFIED
+                or self.adoptee.adoption_status == AdoptionStatus.ADOPTED 
+                # Adoptee should never have ADOPTED status!!!
+                # If a dog is successfully adopted, the adoptee should have FIT status
+            ):
+                raise ValidationError('Adoptee is not eligible for adoption')
+            
+            if self.result == AdoptionResult.EVALUATION:
+                if not (
+                    self.adoptee.adoption_status == AdoptionStatus.TRIAL
+                    and self.dog.adoption_status == AdoptionStatus.TRIAL
+                ):
+                    raise ValidationError(f'Mismatching adoptation status between dog and adoptee {self.dog.adoption_status} - {self.adoptee.adoption_status}')
+            else:
+                raise ValidationError(f'Adoption process is active but result is {self.result}, it should be EVALUATION')
+            
+            
+        else:
+            if self.result != AdoptionResult.APPROVED and self.result != AdoptionResult.REJECTED:
+                raise ValidationError(f'Invalid adoption result for inactive adoption process - {self.result}')
+            if not self.end_date:
+                raise ValidationError('End date is required for REJECTED or APPROVED adoption process')
+            
+
+    def update_adoptation_status(self):
         if self.result == AdoptionResult.EVALUATION:
             if not self.start_date:
                 self.start_date = timezone.now()
             self.is_active = True
-            
-            self.dog.eligible_for_adoption = False
             self.dog.adoption_status = AdoptionStatus.TRIAL
             self.adoptee.adoption_status = AdoptionStatus.TRIAL
         elif self.result == AdoptionResult.APPROVED:
             self.is_active = False
             self.end_date = timezone.now()
-            
-            self.dog.eligible_for_adoption = False
             self.dog.adoption_status = AdoptionStatus.ADOPTED
+            self.adoptee.adoption_status = AdoptionStatus.FIT
             self.dog.owner = self.adoptee
-            self.adoptee.adoption_status = AdoptionStatus.IDLE
-        
         elif self.result == AdoptionResult.REJECTED:
             self.is_active = False
             self.end_date = timezone.now()
-            
-            self.dog.eligible_for_adoption = True
-            self.dog.adoption_status = AdoptionStatus.IDLE
-            self.adoptee.adoption_status = AdoptionStatus.IDLE
+            self.dog.adoption_status = AdoptionStatus.FIT
+            self.adoptee.adoption_status = AdoptionStatus.FIT
         self.dog.save()
         self.adoptee.save()
 
-    ### DO NOT USE, ONLY CALLED IF THE DOG IS PASSED AWAY
-    def force_close_record(self):
+    def force_close_record(self, status_parameters={
+        'dog_status': AdoptionStatus.UNFIT,
+        'adoptee_status': AdoptionStatus.FIT
+    }):
         self.is_active = False
         self.result = AdoptionResult.REJECTED
         self.end_date = timezone.now()
-        self.adoptee.adoption_status = AdoptionStatus.IDLE
+
+        self.dog.adoption_status = status_parameters['dog_status']
+        self.adoptee.adoption_status = status_parameters['adoptee_status']
         self.adoptee.save()
+        self.dog.save()
         self.save()
 
 

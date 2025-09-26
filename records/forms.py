@@ -8,7 +8,7 @@ class DogForm(forms.ModelForm):
         fields = [
             'name', 'age_months', 'gender', 'breed',
             'microchip_status', 'microchip_id', 'intake_reason',
-            'charter', 'owner', 'eligible_for_adoption', 'adoption_status',
+            'charter', 'owner', 'adoption_status',
             'current_weight_kg', 'height_cm', 'color',
             'detailed_description', 'default_photo', 'health_status', 'vaccination_status',
             'castration_status', 'health_record', 'vaccination_record',
@@ -26,7 +26,6 @@ class DogForm(forms.ModelForm):
             'intake_reason': forms.Select(attrs={'class': 'form-select'}),
             'charter': forms.Select(attrs={'class': 'form-select'}),
             'owner': forms.Select(attrs={'class': 'form-select'}),
-            'eligible_for_adoption': forms.CheckboxInput(attrs={'class': 'form-checkbox'}),
             'adoption_status': forms.Select(attrs={'class': 'form-select'}),
             'current_weight_kg': forms.NumberInput(
                 attrs={'class': 'form-input', 'step': '0.1', 'min': '0', 'placeholder': 'Current weight in kg'}),

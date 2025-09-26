@@ -56,12 +56,14 @@ ADOPTION_SUCCESS_RATE = 0.45
 ADOPTION_ONGOING_RATE = 0.35
 ADOPTION_UNSUCCESSFUL_RATE = 0.2
 
+
+
 def create_adoption_processes():
     """Create adoption processes between adoptees and dogs for all charters."""
     from records.models import AdoptionResult, AdoptionStatus
     
-    available_dogs = [dog for dog in Dog.objects.all() if dog.eligible_for_adoption and dog.adoption_status == AdoptionStatus.IDLE]
-    available_adoptees = [adoptee for adoptee in Adoptee.objects.all() if adoptee.adoption_status == AdoptionStatus.IDLE]
+    available_dogs = [dog for dog in Dog.objects.all() if dog.adoption_status == AdoptionStatus.FIT]
+    available_adoptees = [adoptee for adoptee in Adoptee.objects.all() if adoptee.adoption_status == AdoptionStatus.FIT]
 
     if not available_dogs or len(available_adoptees) == 0:
         return 0, 0, 0
@@ -227,7 +229,7 @@ def create_dogs(count_min, count_max, charter=None):
     """Create dogs for a specific charter or all charters."""
     
 
-    healthy, sick, passed = [], [], []
+    healthy, sick, passed, unspecified = [], [], [], []
     
     if charter:
         count = random.randint(count_min, count_max)
@@ -239,6 +241,8 @@ def create_dogs(count_min, count_max, charter=None):
                 sick.append(dog)
             elif dog.health_status == DogHealthStatus.PASSED_AWAY:
                 passed.append(dog)
+            elif dog.health_status == DogHealthStatus.UNSPECIFIED:
+                unspecified.append(dog)
     else:
         for charter in Charter.objects.all():
             count = random.randint(count_min, count_max)
@@ -250,8 +254,10 @@ def create_dogs(count_min, count_max, charter=None):
                     sick.append(dog)
                 elif dog.health_status == DogHealthStatus.PASSED_AWAY:
                     passed.append(dog)
-    Dog.objects.bulk_create(healthy + sick + passed)
-    return len(healthy), len(sick), len(passed)
+                elif dog.health_status == DogHealthStatus.UNSPECIFIED:
+                    unspecified.append(dog)
+    Dog.objects.bulk_create(healthy + sick + passed + unspecified)
+    return len(healthy), len(sick), len(passed), len(unspecified)
 
 
 DOG_DESCRIPTIONS = [
@@ -353,9 +359,10 @@ DOG_SPECIAL_NEEDS = [
         "Requires special harness due to neck sensitivity."
     ]
 
-DOG_HEALTHY_RATE = 0.75
-DOG_SICK_RATE = 0.20
-DOG_PASSED_AWAY_RATE = 0.05
+DOG_HEALTHY_RATE = 0.80
+DOG_UNSPECIFIED_RATE = 0.08
+DOG_SICK_RATE = 0.08
+DOG_PASSED_AWAY_RATE = 0.04
 
 def get_random_dog(charter):
     name = random.choice(DOG_NAMES)
@@ -409,21 +416,20 @@ def get_random_dog(charter):
     health_roll = random.random()
     if health_roll <= DOG_HEALTHY_RATE:
         health_status = DogHealthStatus.HEALTHY
-    elif health_roll <= DOG_HEALTHY_RATE + DOG_SICK_RATE:
+    elif health_roll <= DOG_HEALTHY_RATE + DOG_UNSPECIFIED_RATE:
+        health_status = DogHealthStatus.UNSPECIFIED
+    elif health_roll <= DOG_HEALTHY_RATE + DOG_UNSPECIFIED_RATE + DOG_SICK_RATE:
         health_status = DogHealthStatus.SICK
     else:
         health_status = DogHealthStatus.PASSED_AWAY
         
     
     if health_status == DogHealthStatus.HEALTHY:
-        eligible_for_adoption = True
-        adoption_status = AdoptionStatus.IDLE
-    elif health_status == DogHealthStatus.SICK:
-         eligible_for_adoption = False
-         adoption_status = AdoptionStatus.NOT_AVAILABLE
-    elif health_status == DogHealthStatus.PASSED_AWAY:
-        eligible_for_adoption = False
-        adoption_status = AdoptionStatus.NOT_AVAILABLE
+        adoption_status = AdoptionStatus.FIT
+    elif health_status == DogHealthStatus.SICK or health_status == DogHealthStatus.PASSED_AWAY:
+        adoption_status = AdoptionStatus.UNFIT
+    elif health_status == DogHealthStatus.UNSPECIFIED:
+        adoption_status = AdoptionStatus.UNSPECIFIED
 
     return Dog(
             name=name,
@@ -436,7 +442,6 @@ def get_random_dog(charter):
             arrival_date=arrival_date,
             charter=charter,
             adoption_status=adoption_status,
-            eligible_for_adoption=eligible_for_adoption,
             current_weight_kg=round(weight, 1),
             height_cm=round(height, 1),
             color=color,
