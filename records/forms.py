@@ -1,6 +1,6 @@
 from django import forms
 from django.core.exceptions import ValidationError
-from .models import Dog, Contact, Charter, Adoptee, EntityInfo, DogAdoptionRecord
+from .models import Dog, Contact, Charter, EntityInfo
 
 
 class DogForm(forms.ModelForm):
@@ -8,8 +8,8 @@ class DogForm(forms.ModelForm):
         model = Dog
         fields = [
             'name', 'age_months', 'gender', 'breed',
-            'microchip_status', 'microchip_id', 'intake_reason',
-            'charter', 'owner', 'adoption_status',
+            'microchip_status', 'microchip_id', 'intake_status',
+            'charter', 'owner',
             'current_weight_kg', 'height_cm', 'color',
             'detailed_description', 'default_photo', 'health_status', 'vaccination_status',
             'castration_status', 'health_record', 'vaccination_record',
@@ -24,10 +24,9 @@ class DogForm(forms.ModelForm):
             'microchip_status': forms.Select(attrs={'class': 'form-select'}),
             'microchip_id': forms.TextInput(
                 attrs={'class': 'form-input', 'placeholder': 'Microchip ID (if applicable)'}),
-            'intake_reason': forms.Select(attrs={'class': 'form-select'}),
+            'intake_status': forms.Select(attrs={'class': 'form-select'}),
             'charter': forms.Select(attrs={'class': 'form-select'}),
             'owner': forms.Select(attrs={'class': 'form-select'}),
-            'adoption_status': forms.Select(attrs={'class': 'form-select'}),
             'current_weight_kg': forms.NumberInput(
                 attrs={'class': 'form-input', 'step': '0.1', 'min': '0', 'placeholder': 'Current weight in kg'}),
             'height_cm': forms.NumberInput(
@@ -190,63 +189,3 @@ class CharterForm(forms.ModelForm):
         
         return charter
 
-
-class AdopteeForm(forms.ModelForm):
-    # EntityInfo fields
-    name = forms.CharField(max_length=100, widget=forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Full name'}))
-    email = forms.EmailField(required=False, widget=forms.EmailInput(attrs={'class': 'form-input', 'placeholder': 'email@example.com'}))
-    phone = forms.CharField(max_length=100, required=False, widget=forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Phone number'}))
-    address = forms.CharField(required=False, widget=forms.Textarea(attrs={'class': 'form-textarea', 'rows': 3, 'placeholder': 'Full address'}))
-
-    class Meta:
-        model = Adoptee
-        fields = ['charter', 'adoption_status']
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        if self.instance and self.instance.pk and self.instance.entity_info:
-            self.fields['name'].initial = self.instance.entity_info.name
-            self.fields['email'].initial = self.instance.entity_info.email
-            self.fields['phone'].initial = self.instance.entity_info.phone
-            self.fields['address'].initial = self.instance.entity_info.address
-
-    def save(self, commit=True):
-        adoptee = super().save(commit=False)
-        
-        # Create or update EntityInfo
-        if adoptee.entity_info:
-            entity_info = adoptee.entity_info
-        else:
-            entity_info = EntityInfo()
-        
-        entity_info.name = self.cleaned_data['name']
-        entity_info.email = self.cleaned_data['email']
-        entity_info.phone = self.cleaned_data['phone']
-        entity_info.address = self.cleaned_data['address']
-        
-        if commit:
-            entity_info.save()
-            adoptee.entity_info = entity_info
-            adoptee.save()
-        
-        return adoptee
-
-
-class DogAdoptionRecordForm(forms.ModelForm):
-    class Meta:
-        model = DogAdoptionRecord
-        fields = ['adoptee', 'dog', 'result', 'notes', 'start_date', 'end_date']
-        widgets = {
-            'adoptee': forms.Select(attrs={'class': 'form-select'}),
-            'dog': forms.Select(attrs={'class': 'form-select'}),
-            'result': forms.Select(attrs={'class': 'form-select'}),
-            'notes': forms.Textarea(attrs={'class': 'form-textarea', 'rows': 4, 'placeholder': 'Adoption process notes...'}),
-            'start_date': forms.DateTimeInput(attrs={'class': 'form-input', 'type': 'datetime-local'}),
-            'end_date': forms.DateTimeInput(attrs={'class': 'form-input', 'type': 'datetime-local'}),
-        }
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fields['notes'].required = False
-        self.fields['start_date'].required = False
-        self.fields['end_date'].required = False

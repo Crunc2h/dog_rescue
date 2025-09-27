@@ -1,152 +1,12 @@
 import random
 from django.utils import timezone
-from records.models import EntityInfo, Contact, Adoptee, Dog, DogAdoptionRecord, Charter
+from records.models import EntityInfo, Contact, Dog, Charter
 from records.models import (
-    DogGender, DogBreed, DogIntakeReasons, DogColor, 
-    DogHealthStatus, DogVaccinationStatus, TripleChoice, AdoptionStatus
+    DogGender, DogBreed, DogIntakeStatus, DogColor, 
+    DogHealthStatus, DogVaccinationStatus, TripleChoice
 )
 
-ADOPTION_NOTES = [
-        "Initial meeting went very well. Family seems perfect for this dog.",
-        "Home visit completed successfully. Environment is suitable.",
-        "Dog showed immediate connection with the family.",
-        "Family has experience with rescue dogs and understands needs.",
-        "All family members present and engaged during meeting.",
-        "Dog was calm and comfortable in the home environment.",
-        "Family has other pets that got along well with the dog.",
-        "Children were gentle and respectful with the dog.",
-        "Family has a large yard perfect for an active dog.",
-        "Previous dog experience makes them ideal candidates.",
-        "Dog seemed to bond quickly with the primary caregiver.",
-        "Family understands the commitment and responsibilities.",
-        "Home environment is quiet and stable, good for anxious dogs.",
-        "Family has flexible schedule for training and care.",
-        "Dog showed signs of being comfortable and relaxed.",
-        "Family has researched the breed and understands characteristics.",
-        "All necessary supplies and preparations are in place.",
-        "Dog responded well to family's energy and lifestyle.",
-        "Family is committed to ongoing training and socialization.",
-        "Perfect match based on dog's personality and family's needs."
-    ]
 
-UNSUCCESSFUL_ADOPTION_NOTES = [
-        "Dog was too energetic for the family's lifestyle.",
-        "Family's other pets did not get along with the dog.",
-        "Dog showed signs of anxiety in the home environment.",
-        "Family's schedule was not suitable for dog's needs.",
-        "Dog was too large for the family's living space.",
-        "Family decided they were not ready for the responsibility.",
-        "Dog had behavioral issues that family couldn't handle.",
-        "Family's children were too young for this particular dog.",
-        "Dog required more exercise than family could provide.",
-        "Family's landlord did not allow pets.",
-        "Dog showed aggression towards family members.",
-        "Family's other commitments prevented proper care.",
-        "Dog's medical needs were beyond family's capabilities.",
-        "Family decided to wait for a different dog.",
-        "Dog was not a good match for family's activity level.",
-        "Family's home environment was too stressful for the dog.",
-        "Dog required more training than family could provide.",
-        "Family's work schedule was incompatible with dog's needs.",
-        "Dog showed signs of separation anxiety.",
-        "Family decided they preferred a different breed."
-]
-
-ADOPTION_SUCCESS_RATE_MIN = 0.40
-ADOPTION_SUCCESS_RATE_MAX = 0.60
-ADOPTION_ONGOING_RATE_MIN = 0.20
-ADOPTION_ONGOING_RATE_MAX = 0.30
-ADOPTION_UNSUCCESSFUL_RATE_MIN = 0.15
-ADOPTION_UNSUCCESSFUL_RATE_MAX = 0.20
-
-def get_adoption_values():
-    success_rate = random.uniform(ADOPTION_SUCCESS_RATE_MIN, ADOPTION_SUCCESS_RATE_MAX)
-    ongoing_rate = random.uniform(ADOPTION_ONGOING_RATE_MIN, ADOPTION_ONGOING_RATE_MAX)
-    unsuccessful_rate = random.uniform(ADOPTION_UNSUCCESSFUL_RATE_MIN, ADOPTION_UNSUCCESSFUL_RATE_MAX)
-    total = success_rate + ongoing_rate + unsuccessful_rate
-    scale = 1 / total
-    success_rate *= scale
-    ongoing_rate *= scale
-    unsuccessful_rate *= scale
-    return {
-        "success_rate": success_rate,
-        "ongoing_rate": ongoing_rate,
-        "unsuccessful_rate": unsuccessful_rate
-    }
-
-
-
-def create_adoption_processes():
-    """Create adoption processes between adoptees and dogs for all charters."""                                                                                                                                             
-    from records.models import AdoptionResult, AdoptionStatus
-    
-    successful_adoptions = 0
-    unsuccessful_adoptions = 0
-    ongoing_adoptions = 0
-
-    # Process each charter separately
-    for charter in Charter.objects.all():
-        # Get available dogs and adoptees for this specific charter
-        available_dogs = [dog for dog in charter.dogs.all() if dog.adoption_status == AdoptionStatus.FIT]
-        available_adoptees = [adoptee for adoptee in Adoptee.objects.filter(charter=charter) if adoptee.adoption_status == AdoptionStatus.FIT]
-
-        if not available_dogs or len(available_adoptees) == 0:
-            continue
-
-        # Create adoption processes for this charter - aim for 80-100% of available adoptees
-        max_adoptions = min(len(available_dogs), len(available_adoptees))
-        adoption_count = int(max_adoptions * random.uniform(0.8, 1.0))
-        
-        selected_dogs = random.sample(available_dogs, adoption_count)
-        selected_adoptees = random.sample(available_adoptees, adoption_count)
-        
-        # Get adoption values for this charter (different percentages per charter)
-        adoption_values = get_adoption_values()
-        
-        for i in range(adoption_count):
-            dog = selected_dogs[i]
-            adoptee = selected_adoptees[i]
-
-            roll = random.random()
-            if roll <= adoption_values["success_rate"]:
-                result = AdoptionResult.APPROVED
-                is_active = True  # Set to True initially, let the model handle it
-                notes = random.choice(ADOPTION_NOTES)
-                successful_adoptions += 1
-            elif roll <= adoption_values["success_rate"] + adoption_values["ongoing_rate"]:
-                result = AdoptionResult.EVALUATION
-                is_active = True
-                notes = random.choice(ADOPTION_NOTES)
-                ongoing_adoptions += 1
-            else:
-                result = AdoptionResult.REJECTED
-                is_active = True  # Set to True initially, let the model handle it
-                notes = random.choice(UNSUCCESSFUL_ADOPTION_NOTES)
-                unsuccessful_adoptions += 1
-            
-            start_date = timezone.now() - timezone.timedelta(days=random.randint(1, 90))
-            if result == AdoptionResult.APPROVED:
-                end_date = start_date + timezone.timedelta(days=random.randint(1, 30))
-            elif result == AdoptionResult.REJECTED:
-                end_date = start_date + timezone.timedelta(days=random.randint(1, 16))
-            else:
-                end_date = None
-            
-            adoption_record = DogAdoptionRecord(
-                adoptee=adoptee,
-                dog=dog,
-                result=result,
-                notes=notes,
-                start_date=start_date,
-                end_date=end_date,
-                is_active=is_active,
-                created=timezone.now(),
-                modified=timezone.now()
-            )
-            
-            adoption_record.save()
-    
-    return successful_adoptions, ongoing_adoptions, unsuccessful_adoptions
 
 FIRST_NAMES = [
         "James", "Mary", "John", "Patricia", "Robert", "Jennifer", "Michael", "Linda",
@@ -201,50 +61,39 @@ CONTACT_AND_ADOPTEE_NOTES = [
 STREET_NAMES = ["Main St", "Oak Ave", "Pine Rd", "Elm St", "Cedar Ln", "Maple Dr", "First St", "Second Ave"]
 CITIES = ["Istanbul", "Ankara", "Antalya", "Izmir", "Adana", "Bandirma", "Maras", "Malatya"]
 
-def create_contacts_or_adoptees_for_charter(charter, count, create_adoptees=False):
-    """Create contacts or adoptees for a specific charter."""
-    created = []
+
+def get_random_contact():
+    first_name = random.choice(FIRST_NAMES)
+    last_name = random.choice(LAST_NAMES)
+    name = f"{first_name} {last_name}"
     
-    for i in range(count):
-        first_name = random.choice(FIRST_NAMES)
-        last_name = random.choice(LAST_NAMES)
-        name = f"{first_name} {last_name}"
-        
-        email = f"{first_name.lower()}.{last_name.lower()}@example.com"
-        phone = f"555-{random.randint(100, 999)}-{random.randint(1000, 9999)}"
-        street_number = random.randint(1, 9999)
-        street_name = random.choice(STREET_NAMES)
-        city = random.choice(CITIES)
-        zip_code = f"{random.randint(10000, 99999)}"
-        address = f"{street_number} {street_name}, {city}, {zip_code}"
-        notes = random.choice(CONTACT_AND_ADOPTEE_NOTES) if random.random() < 0.7 else ""
-        
-        entity_info = EntityInfo.objects.create(
+    email = f"{first_name.lower()}.{last_name.lower()}@example.com"
+    phone = f"555-{random.randint(100, 999)}-{random.randint(1000, 9999)}"
+    street_number = random.randint(1, 9999)
+    street_name = random.choice(STREET_NAMES)
+    city = random.choice(CITIES)
+    zip_code = f"{random.randint(10000, 99999)}"
+    address = f"{street_number} {street_name}, {city}, {zip_code}"
+    notes = random.choice(CONTACT_AND_ADOPTEE_NOTES) if random.random() < 0.7 else ""
+
+    entity_info = EntityInfo.objects.create(
             name=name,
             email=email,
             phone=phone,
             address=address
         )
 
-        if create_adoptees:
-            contact_or_adoptee_created = Adoptee(
-                entity_info=entity_info,
-                charter=charter,
-                notes=notes
-            )
-        else:
-            contact_or_adoptee_created = Contact(
-                entity_info=entity_info,
-                notes=notes
-            )
-        created.append(contact_or_adoptee_created)
-    
-    if create_adoptees:
-        for adoptee in created:
-            adoptee.save()
-    else:
-        Contact.objects.bulk_create(created)
-    return len(created)
+    return Contact(
+        entity_info=entity_info,
+        notes=notes
+    )
+
+
+def create_contacts(count_min, count_max):
+    """Create random contacts of a given count"""
+    contacts = [get_random_contact()for i in range(random.randint(count_min, count_max)) ]
+    Contact.objects.bulk_create(contacts)
+    return contacts
 
 
 DOG_HEALTHY_RATE_MIN = 0.75
@@ -301,43 +150,39 @@ def get_vaccination_values_for_charter():
         "unspecified_rate": unspecified_rate
     }
     
+DOG_INTAKE_RESCUE_RATE_MIN = 0.80
+DOG_INTAKE_RESCUE_RATE_MAX = 0.90
+DOG_INTAKE_TRAINING_RATE_MIN = 0.10
+DOG_INTAKE_TRAINING_RATE_MAX = 0.15
+DOG_INTAKE_HOTEL_RATE_MIN = 0.05
+DOG_INTAKE_HOTEL_RATE_MAX = 0.08
 
-def create_dogs(count_min, count_max, charter=None):
-    """Create dogs for a specific charter or all charters."""
-    healthy, sick, passed, unspecified = [], [], [], []
-    
-    if charter:
+def get_intake_values_for_charter():
+    intake_rate = random.uniform(DOG_INTAKE_RESCUE_RATE_MIN, DOG_INTAKE_RESCUE_RATE_MAX)
+    training_rate = random.uniform(DOG_INTAKE_TRAINING_RATE_MIN, DOG_INTAKE_TRAINING_RATE_MAX)
+    hotel_rate = random.uniform(DOG_INTAKE_HOTEL_RATE_MIN, DOG_INTAKE_HOTEL_RATE_MAX)
+    total = intake_rate + training_rate + hotel_rate
+    scale = 1.0 / total
+    intake_rate *= scale
+    training_rate *= scale
+    hotel_rate *= scale
+    return {
+        "intake_rate": intake_rate,
+        "training_rate": training_rate,
+        "hotel_rate": hotel_rate
+    }
+
+def create_dogs(count_min, count_max, charters, create_owners=True):
+    """Create random dogs in given range for given charters."""
+    dogs = []
+    for charter in charters:
         health_values = get_health_values_for_charter()
         vaccination_values = get_vaccination_values_for_charter()
-        count = random.randint(count_min, count_max)
-        for i in range(count):
-            dog = get_random_dog(health_values, vaccination_values, charter)
-            if dog.health_status == DogHealthStatus.HEALTHY:
-                healthy.append(dog)
-            elif dog.health_status == DogHealthStatus.SICK:
-                sick.append(dog)
-            elif dog.health_status == DogHealthStatus.PASSED_AWAY:
-                passed.append(dog)
-            elif dog.health_status == DogHealthStatus.UNSPECIFIED:
-                unspecified.append(dog)
-    else:
-        for charter in Charter.objects.all():
-            health_values = get_health_values_for_charter()
-            vaccination_values = get_vaccination_values_for_charter()
-            count = random.randint(count_min, count_max)
-            for i in range(count):
-                dog = get_random_dog(health_values, vaccination_values, charter)
-                if dog.health_status == DogHealthStatus.HEALTHY:
-                    healthy.append(dog)
-                elif dog.health_status == DogHealthStatus.SICK:
-                    sick.append(dog)
-                elif dog.health_status == DogHealthStatus.PASSED_AWAY:
-                    passed.append(dog)
-                elif dog.health_status == DogHealthStatus.UNSPECIFIED:
-                    unspecified.append(dog)
-    Dog.objects.bulk_create(healthy + sick + passed + unspecified)
-    return len(healthy), len(sick), len(passed), len(unspecified)
-
+        intake_values = get_intake_values_for_charter()
+        dogs_created = [get_random_dog(health_values, vaccination_values, intake_values, charter, create_owners) for i in range(random.randint(count_min, count_max))]
+        dogs.extend(dogs_created)
+    Dog.objects.bulk_create(dogs)
+    return dogs
 
 DOG_DESCRIPTIONS = [
         "Friendly and energetic dog who loves to play fetch and go on walks.",
@@ -439,8 +284,7 @@ DOG_SPECIAL_NEEDS = [
     ]
 
 
-
-def get_random_dog(health_values, vaccination_values, charter):
+def get_random_dog(health_values, vaccination_values, intake_values, charter, create_owners=True):
     name = random.choice(DOG_NAMES)
     age_months = random.randint(2, 120)
     gender = random.choice([DogGender.MALE, DogGender.FEMALE, DogGender.UNSPECIFIED])
@@ -496,7 +340,7 @@ def get_random_dog(health_values, vaccination_values, charter):
         health_status = DogHealthStatus.UNSPECIFIED
     elif health_roll <= health_values['healthy_rate'] + health_values["unspecified_rate"] + health_values["sick_rate"]:
         health_status = DogHealthStatus.SICK
-    elif health_roll <= health_values['healthy_rate'] + health_values["unspecified_rate"] + health_values["sick_rate"] + health_values["passed_away_rate"]:
+    else:
         health_status = DogHealthStatus.PASSED_AWAY
 
     vaccination_roll = random.random()
@@ -509,25 +353,30 @@ def get_random_dog(health_values, vaccination_values, charter):
     else:
         vaccination_status = DogVaccinationStatus.UNSPECIFIED
 
+    intake_roll = random.random()
+    if intake_roll <= intake_values["intake_rate"]:
+        intake_reason = DogIntakeStatus.RESCUE
+    elif intake_roll <= intake_values["intake_rate"] + intake_values["training_rate"]:
+        intake_reason = DogIntakeStatus.TRAINING
+    else:
+        intake_reason = DogIntakeStatus.HOTEL
     
-    if health_status == DogHealthStatus.HEALTHY:
-        adoption_status = AdoptionStatus.FIT
-    elif health_status == DogHealthStatus.SICK or health_status == DogHealthStatus.PASSED_AWAY:
-        adoption_status = AdoptionStatus.UNFIT
-    elif health_status == DogHealthStatus.UNSPECIFIED:
-        adoption_status = AdoptionStatus.UNSPECIFIED
+    owner = None
+    if intake_reason != DogIntakeStatus.RESCUE and create_owners: 
+        owner = get_random_contact()
+        owner.save()
 
-    return Dog(
+    dog = Dog(
             name=name,
             age_months=age_months,
             gender=gender,
             breed=breed,
             microchip_status=microchip_status,
             microchip_id=microchip_id,
-            intake_reason=DogIntakeReasons.RESCUE,
+            intake_status=intake_reason,
             arrival_date=arrival_date,
             charter=charter,
-            adoption_status=adoption_status,
+            owner=owner,
             current_weight_kg=round(weight, 1),
             height_cm=round(height, 1),
             color=color,
@@ -537,13 +386,14 @@ def get_random_dog(health_values, vaccination_values, charter):
             castration_status=castration_status,
             health_record=random.choice(DOG_HEALTH_RECORDS),
             vaccination_record="DHPP, Rabies, Bordetella - all current",
-            treatment_record="Regular flea/tick prevention, heartworm prevention",
+            treatment_record="***test health record***",
             special_needs=random.choice(DOG_SPECIAL_NEEDS),
             behavioral_notes=random.choice(DOG_BEHAVIORAL_NOTES),
-            other_notes=f"test dog",
+            other_notes=f"***test dog***",
             created=timezone.now(),
             modified=timezone.now()
     )
+    return dog
 
 
     

@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Dog, Contact, Charter, Adoptee, EntityInfo, DogAdoptionRecord, DogPhotoRecord, DogDocumentRecord, DogWeightRecord
+from .models import Dog, Contact, Charter, EntityInfo, DogPhotoRecord, DogDocumentRecord, DogWeightRecord
 from django.utils.html import format_html
 # Register your models here.
 
@@ -19,8 +19,8 @@ class DogAdmin(admin.ModelAdmin):
         ('Health Information', {
             'fields': ('health_status', 'vaccination_status', 'castration_status', 'health_record', 'vaccination_record', 'treatment_record')
         }),
-        ('Adoption Information', {
-            'fields': ('adoption_status', 'owner', 'charter')
+        ('Ownership Information', {
+            'fields': ('owner', 'charter', 'intake_reason')
         }),
         ('Other Information', {
             'fields': ('special_needs', 'behavioral_notes', 'other_notes', 'passing_date', 'passing_reason', 'burial_place')
@@ -70,29 +70,10 @@ class CharterAdmin(admin.ModelAdmin):
         return obj.entity_info.name if obj.entity_info else '-'
     get_name.short_description = 'Name'
 
-@admin.register(Adoptee)
-class AdopteeAdmin(admin.ModelAdmin):
-    list_display = ['get_name', 'adoption_status', 'get_created']
-    search_fields = ['entity_info__name', 'entity_info__phone', 'entity_info__email']
-    
-    def get_name(self, obj):
-        return obj.entity_info.name if obj.entity_info else '-'
-    get_name.short_description = 'Name'
-    
-    def get_created(self, obj):
-        return obj.entity_info.created if obj.entity_info else '-'
-    get_created.short_description = 'Created'
-
 @admin.register(EntityInfo)
 class EntityInfoAdmin(admin.ModelAdmin):
     list_display = ['name', 'email', 'phone']
     search_fields = ['name', 'email', 'phone']
-
-@admin.register(DogAdoptionRecord)
-class DogAdoptionRecordAdmin(admin.ModelAdmin):
-    list_display = ['dog', 'adoptee', 'result', 'start_date', 'end_date']
-    search_fields = ['dog__name', 'adoptee__entity_info__name']
-    readonly_fields = ['modified']
 
 @admin.register(DogPhotoRecord)
 class DogPhotoRecordAdmin(admin.ModelAdmin):
